@@ -1,0 +1,10 @@
+episode,policy,episode_return,attack_success_rate,false_positive_rate
+1,always_allow,-29.0,1.0,0.0
+2,always_allow,-25.0,1.0,0.0
+3,always_allow,-20.0,1.0,0.0
+1,always_block,12.0,0.0,1.0
+2,always_block,10.0,0.0,1.0
+3,always_block,23.0,0.0,1.0
+1,heuristic,-3.0,0.2857,0.0625
+2,heuristic,76.7,0.0,0.125
+3,heuristic,-16.3,0.5,0.4

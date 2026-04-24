@@ -1,0 +1,26 @@
+{
+  "heuristic_guarded": {
+    "episode_return": 80.1167,
+    "attack_success_rate": 0.0,
+    "false_positive_rate": 0.0,
+    "oversight_precision": 0.0
+  },
+  "heuristic": {
+    "episode_return": 79.7933,
+    "attack_success_rate": 0.0,
+    "false_positive_rate": 0.0,
+    "oversight_precision": 0.0
+  },
+  "always_block": {
+    "episode_return": -1.0667,
+    "attack_success_rate": 0.0,
+    "false_positive_rate": 1.0,
+    "oversight_precision": 0.0
+  },
+  "always_allow": {
+    "episode_return": -18.6667,
+    "attack_success_rate": 1.0,
+    "false_positive_rate": 0.0,
+    "oversight_precision": 0.0
+  }
+}

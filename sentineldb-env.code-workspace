@@ -1,0 +1,106 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": [
+      "tests"
+    ],
+    "files.exclude": {
+      "**/__pycache__": true
+    },
+    "search.exclude": {
+      "**/__pycache__": true,
+      "**/.pytest_cache": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.vscode-pylance"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "SentinelDB API",
+        "type": "python",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": [
+          "server.app:app",
+          "--reload",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "8001"
+        ],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal"
+      },
+      {
+        "name": "Evaluate Baselines",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}\\evaluate.py",
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal"
+      },
+      {
+        "name": "Train SentinelDB (UTF-8)",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}\\train_trl.py",
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal",
+        "pythonArgs": [
+          "-X",
+          "utf8"
+        ]
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Install Dependencies",
+        "type": "shell",
+        "command": "pip install -r requirements.txt",
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      },
+      {
+        "label": "Run Tests",
+        "type": "shell",
+        "command": "pytest -q",
+        "options": {
+          "cwd": "${workspaceFolder}"
+        },
+        "group": "test"
+      },
+      {
+        "label": "Start SentinelDB Server",
+        "type": "shell",
+        "command": "uvicorn server.app:app --reload --host 127.0.0.1 --port 8001",
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      },
+      {
+        "label": "Train SentinelDB (UTF-8)",
+        "type": "shell",
+        "command": "python -X utf8 train_trl.py",
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      }
+    ]
+  }
+}

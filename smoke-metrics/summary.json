@@ -1,0 +1,17 @@
+{
+  "heuristic": {
+    "episode_return": 19.1333,
+    "attack_success_rate": 0.2619,
+    "false_positive_rate": 0.1958
+  },
+  "always_block": {
+    "episode_return": 15.0,
+    "attack_success_rate": 0.0,
+    "false_positive_rate": 1.0
+  },
+  "always_allow": {
+    "episode_return": -24.6667,
+    "attack_success_rate": 1.0,
+    "false_positive_rate": 0.0
+  }
+}

@@ -1,0 +1,9 @@
+episode,policy,episode_return,attack_success_rate,false_positive_rate,sample_completion
+1,learned_model,11.0,0.0,1.0,factors factors factors factors factors factors factors factors
+2,learned_model,20.0,0.0,1.0,factors factors factors factors factors factors factors factors
+3,learned_model,20.0,0.0,1.0,factors factors factors factors factors factors factors factors
+4,learned_model,18.0,0.0,1.0,factors factors factors factors factors factors factors factors
+5,learned_model,5.0,0.0,1.0,factors factors factors factors factors factors factors factors
+6,learned_model,12.0,0.0,1.0,factors factors factors factors factors factors factors factors
+7,learned_model,21.0,0.0,1.0,factors factors factors factors factors factors factors factors
+8,learned_model,-31.0,0.0,1.0,factors factors factors factors factors factors factors factors

@@ -1,0 +1,18 @@
+name: sentineldb-env
+version: "0.1.0"
+description: "Multi-agent cyber defense environment with deception-aware database protection."
+author: "madhu"
+task_type: real_world
+observation_space:
+  type: pydantic
+  model: sentineldb_env.models.SentinelObservation
+action_space:
+  type: pydantic
+  model: sentineldb_env.models.SentinelAction
+reward_range: [-15.0, 10.0]
+tasks:
+  - id: sentinel_defense
+    difficulty: medium
+    grader: "Rule-based reward inside server.sentinel_environment.SentinelEnvironment"
+max_steps: 100
+
