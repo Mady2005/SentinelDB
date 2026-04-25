@@ -19,6 +19,10 @@ class SentinelObservation(BaseSchema):
     has_or_1_eq_1: bool
     has_union_select: bool
     has_drop: bool
+    has_permission_risk: bool = False
+    has_schema_mismatch_risk: bool = False
+    has_timeout_risk: bool = False
+    has_rate_limit_risk: bool = False
     source_id: str
     past_queries_from_source: int = Field(..., ge=0)
     past_attacks_from_source: int = Field(..., ge=0)
@@ -58,6 +62,7 @@ class OversightObservation(BaseSchema):
     interventions_used: int = Field(..., ge=0)
     recent_successful_attacks: int = Field(..., ge=0)
     recent_false_positives: int = Field(..., ge=0)
+    failure_modes: list[str] = Field(default_factory=list)
 
 
 class OversightAction(BaseSchema):

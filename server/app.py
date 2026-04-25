@@ -11,7 +11,7 @@ import uvicorn
 from sentineldb_env.models import SentinelAction, SentinelObservation, StepPayload
 
 from .models import DemoQueryRequest, DemoQueryResponse, DemoResetResponse, DemoSessionRequest, DemoSessionResponse
-from .sentinel_environment import SentinelEnvironment, heuristic_action_for_observation
+from .sentinel_environment import QueryRecord, SentinelEnvironment, heuristic_action_for_observation
 
 try:
     from openenv import create_openenv_app  # type: ignore
@@ -42,6 +42,11 @@ def load_best_benchmark_summary() -> tuple[str, dict]:
 
 
 @app.get("/")
+def app_home() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/healthz")
 def healthcheck() -> dict[str, str]:
     return {"status": "ok", "app": "SentinelDB"}
 
@@ -67,6 +72,11 @@ def evaluate_demo_query(request: DemoQueryRequest) -> DemoQueryResponse:
         obs = env.observation_from_raw_query(request.query_raw, source_id=request.source_id, record_source=False)
         sentinel_action = heuristic_action_for_observation(obs)
         explanation = env.explain_action(obs, sentinel_action)
+        explanation["reward_breakdown"] = env.preview_reward_breakdown(
+            query=QueryRecord(type=env.infer_query_type(request.query_raw), raw=request.query_raw, source_id=request.source_id),
+            obs=obs,
+            executed_action=sentinel_action,
+        )
         sentinel_proposal = sentinel_action.action_type
         oversight_decision = "APPROVE"
         executed_action = sentinel_action.action_type
@@ -87,7 +97,9 @@ def evaluate_demo_query(request: DemoQueryRequest) -> DemoQueryResponse:
         risk_score=explanation["risk_score"],
         backup_status=explanation["backup_status"],
         suspicious_signals=explanation["suspicious_signals"],
+        failure_modes=explanation["failure_modes"],
         rationale=explanation["rationale"],
+        reward_breakdown=explanation["reward_breakdown"],
         observation=observation,
         state=env.get_state(),
         log_lines=explanation["log_lines"],

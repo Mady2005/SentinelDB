@@ -24,6 +24,10 @@ from sentineldb_env.client import SentinelEnv
 from sentineldb_env.policy import build_prompt_from_observation, parse_action
 
 
+def get_model_device(model: Any) -> Any:
+    return next(model.parameters()).device
+
+
 def write_training_artifacts(output_dir: Path, eval_rows: list[dict[str, float]], log_history: list[dict[str, Any]]) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -91,8 +95,9 @@ def generate_completion_texts(trainer: GRPOTrainer, prompts: list[str]) -> tuple
             raise
         outputs = []
         texts = []
+        model_device = get_model_device(trainer.model)
         for prompt in prompts:
-            encoded = tokenizer(prompt, return_tensors="pt")
+            encoded = tokenizer(prompt, return_tensors="pt").to(model_device)
             generated = trainer.model.generate(**encoded, max_new_tokens=8)
             completion_ids = generated[0][encoded["input_ids"].shape[1]:].tolist()
             text = tokenizer.decode(completion_ids, skip_special_tokens=True)
@@ -113,10 +118,11 @@ def run_episode(env: SentinelEnv, tokenizer: Any, model: Any, max_new_tokens: in
     done = False
     episode_return = 0.0
     last_info: dict[str, Any] = {}
+    model_device = get_model_device(model)
 
     while not done:
         prompt = build_prompt_from_observation(obs)
-        encoded = tokenizer(prompt, return_tensors="pt")
+        encoded = tokenizer(prompt, return_tensors="pt").to(model_device)
         generated = model.generate(**encoded, max_new_tokens=max_new_tokens)
         completion = tokenizer.decode(generated[0][encoded["input_ids"].shape[1]:], skip_special_tokens=True)
         action = parse_action(completion)
@@ -202,6 +208,7 @@ def main() -> None:
     parser.add_argument("--model-name", default="Qwen/Qwen2.5-0.5B-Instruct")
     parser.add_argument("--output-dir", default="artifacts/grpo")
     parser.add_argument("--episodes", type=int, default=16)
+    parser.add_argument("--use-cpu", action="store_true", help="Force training onto CPU instead of using GPU when available.")
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
@@ -222,7 +229,7 @@ def main() -> None:
         num_train_epochs=1,
         max_completion_length=8,
         use_vllm=False,
-        use_cpu=True,
+        use_cpu=args.use_cpu,
         gradient_checkpointing=False,
         save_strategy="no",
         report_to="none",

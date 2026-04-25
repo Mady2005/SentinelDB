@@ -29,7 +29,9 @@ class DemoQueryResponse(BaseModel):
     risk_score: int
     backup_status: str
     suspicious_signals: list[str]
+    failure_modes: list[str]
     rationale: list[str]
+    reward_breakdown: dict[str, float]
     observation: dict
     state: dict
     log_lines: list[str]
@@ -60,8 +62,10 @@ class DemoSessionResponse(BaseModel):
     risk_score: int
     backup_status: str
     suspicious_signals: list[str]
+    failure_modes: list[str]
     rationale: list[str]
     reward: dict
+    reward_breakdown: dict[str, float]
     done: bool
     observation: dict
     state: dict

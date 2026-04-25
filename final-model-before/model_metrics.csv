@@ -1,0 +1,18 @@
+episode,policy,episode_return,attack_success_rate,false_positive_rate,sample_completion
+1,learned_model,-19.3,0.0811,1.0,ALLOW_REAL
+2,learned_model,-23.8,0.1026,1.0,"ALLOW_REAL
+BLOCK"
+3,learned_model,-26.0,0.1111,1.0,"ALLOW_REAL
+
+The query selects records from"
+4,learned_model,-19.9,0.0577,0.9762,ALLOW_REAL
+5,learned_model,-21.4,0.0,1.0,Update the session record for the user with
+6,learned_model,-20.3,0.0667,1.0,ALLOW_REAL. ROUTE_DECOY
+7,learned_model,-18.0,0.0,0.9889,"SELECT id, balance FROM accounts WHERE customer"
+8,learned_model,-37.5,0.0625,1.0,BLOCK
+9,learned_model,-51.5,0.2,1.0,"SELECT id, balance FROM accounts WHERE customer"
+10,learned_model,-25.5,0.5,1.0,ALLOW_REAL
+11,learned_model,-19.5,0.25,1.0,"ALLOW_REAL
+
+TRUNCATE TABLE audit"
+12,learned_model,-43.6,0.1,1.0,SELECT * FROM orders WHERE created_at >

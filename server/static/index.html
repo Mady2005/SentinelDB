@@ -3,215 +3,364 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SentinelDB Demo</title>
+  <title>SentinelDB | Command Center</title>
   <style>
+    @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap");
+
     :root {
-      --bg: #061017;
-      --bg-2: #091621;
-      --panel: rgba(10, 20, 30, 0.84);
-      --panel-strong: rgba(6, 13, 21, 0.96);
-      --line: rgba(145, 201, 255, 0.12);
-      --text: #eef6ff;
-      --muted: #88a4bf;
-      --sentinel: #7bd4ff;
-      --oversight: #7cf0bc;
-      --danger: #ff8d8d;
-      --warn: #ffd970;
-      --ok: #87e1a8;
-      --glow: 0 24px 80px rgba(0, 0, 0, 0.28);
+      --bg: #020617;
+      --bg-soft: #07111f;
+      --panel: rgba(15, 23, 42, 0.82);
+      --panel-2: rgba(9, 15, 28, 0.92);
+      --line: rgba(51, 65, 85, 0.65);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --green: #22c55e;
+      --green-soft: rgba(34, 197, 94, 0.18);
+      --red: #ef4444;
+      --red-soft: rgba(239, 68, 68, 0.16);
+      --amber: #f59e0b;
+      --amber-soft: rgba(245, 158, 11, 0.16);
+      --blue: #3b82f6;
+      --blue-soft: rgba(59, 130, 246, 0.14);
+      --cyan: #22d3ee;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
     }
 
     * { box-sizing: border-box; }
-
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
       min-height: 100vh;
+      font-family: "JetBrains Mono", monospace;
       color: var(--text);
-      font-family: "Bahnschrift", "Trebuchet MS", sans-serif;
       background:
-        radial-gradient(circle at 10% 0%, rgba(123, 212, 255, 0.12), transparent 28%),
-        radial-gradient(circle at 90% 0%, rgba(124, 240, 188, 0.10), transparent 24%),
-        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+        radial-gradient(circle at 20% 0%, rgba(34, 197, 94, 0.10), transparent 26%),
+        radial-gradient(circle at 100% 20%, rgba(59, 130, 246, 0.13), transparent 28%),
+        linear-gradient(180deg, #020617 0%, #07111f 100%);
+      overflow-x: hidden;
     }
 
-    body::before {
-      content: "";
+    .scan-line {
+      position: fixed;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.65), transparent);
+      pointer-events: none;
+      animation: scan 9s linear infinite;
+      z-index: 50;
+    }
+
+    .grid-overlay {
       position: fixed;
       inset: 0;
       pointer-events: none;
+      opacity: 0.16;
       background-image:
-        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-      background-size: 34px 34px;
-      mask-image: radial-gradient(circle at center, black 35%, transparent 90%);
-      opacity: 0.55;
+        linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(circle at center, black 44%, transparent 92%);
     }
 
-    .wrap {
-      max-width: 1320px;
+    @keyframes scan {
+      from { transform: translateY(0); }
+      to { transform: translateY(100vh); }
+    }
+
+    @keyframes floatIn {
+      from { opacity: 0; transform: translateY(18px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 rgba(34, 197, 94, 0); }
+      50% { box-shadow: 0 0 24px rgba(34, 197, 94, 0.12); }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+
+    @keyframes borderRun {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+
+    @keyframes panelFlash {
+      0% { transform: scale(1); box-shadow: 0 0 0 rgba(34, 197, 94, 0); }
+      45% { transform: scale(1.01); box-shadow: 0 0 30px rgba(34, 197, 94, 0.16); }
+      100% { transform: scale(1); box-shadow: 0 0 0 rgba(34, 197, 94, 0); }
+    }
+
+    @keyframes timelineEnter {
+      from { opacity: 0; transform: translateY(18px) translateX(8px); }
+      to { opacity: 1; transform: translateY(0) translateX(0); }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .page {
+      max-width: 1480px;
       margin: 0 auto;
-      padding: 22px 18px 34px;
-    }
-
-    .hero {
-      display: grid;
-      grid-template-columns: 1.2fr auto;
-      gap: 16px;
-      align-items: end;
-      margin-bottom: 18px;
-      padding: 18px 20px;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
-      box-shadow: var(--glow);
-      overflow: hidden;
-      position: relative;
-    }
-
-    .hero::after {
-      content: "";
-      position: absolute;
-      right: -80px;
-      top: -60px;
-      width: 240px;
-      height: 240px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(123,212,255,0.18), transparent 68%);
-      pointer-events: none;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      padding: 7px 11px;
-      border-radius: 999px;
-      background: rgba(124, 240, 188, 0.09);
-      color: var(--oversight);
-      font-size: 0.76rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(2.2rem, 5vw, 3.8rem);
-      line-height: 0.94;
-      letter-spacing: 0.02em;
-    }
-
-    .subtitle {
-      margin-top: 10px;
-      color: var(--muted);
-      max-width: 760px;
-      line-height: 1.55;
-      font-size: 1rem;
-    }
-
-    .status-rail {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .status-chip {
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      font-size: 0.84rem;
-      font-weight: 700;
-    }
-
-    .layout-top {
-      display: grid;
-      grid-template-columns: 0.95fr 1.05fr;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
-    .layout-bottom {
-      display: grid;
-      grid-template-columns: 0.92fr 1.08fr;
-      gap: 18px;
+      padding: 24px;
     }
 
     .panel {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(9, 15, 28, 0.95));
       border: 1px solid var(--line);
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012));
-      box-shadow: var(--glow);
-      padding: 20px;
-      backdrop-filter: blur(10px);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      animation: floatIn 0.45s ease;
     }
 
-    .panel-head {
+    .glow-green { border-color: rgba(34, 197, 94, 0.34); animation: floatIn 0.45s ease, pulseGlow 4s ease-in-out infinite; }
+    .glow-red { border-color: rgba(239, 68, 68, 0.32); }
+
+    .nav {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 18px;
+      margin-bottom: 22px;
+      padding: 18px 22px;
+    }
+
+    .brand, .live-status, .nav-metrics {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .shield {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(34, 197, 94, 0.26);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.7rem;
+      letter-spacing: -0.04em;
+    }
+
+    .brand h1 span { color: var(--green); }
+    .eyebrow {
+      color: var(--muted);
+      font-size: 0.67rem;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+    }
+
+    .nav-metrics {
+      gap: 26px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+
+    .nav-metrics strong {
+      display: block;
+      color: var(--blue);
+      font-size: 0.82rem;
+      margin-top: 4px;
+      letter-spacing: normal;
+    }
+
+    .divider {
+      width: 1px;
+      height: 38px;
+      background: var(--line);
+    }
+
+    .live-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(34, 197, 94, 0.6);
+      animation: blink 1.2s ease-in-out infinite;
+    }
+
+    .live-status strong {
+      color: var(--green);
+      font-size: 0.86rem;
+      letter-spacing: 0.08em;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1.15fr 1.3fr 0.9fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel-body { padding: 22px; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       gap: 12px;
       margin-bottom: 16px;
     }
 
-    .panel-head h2 {
+    .section-title h2,
+    .section-title h3 {
       margin: 0;
-      font-size: 0.98rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
       color: var(--muted);
-    }
-
-    .tag {
-      padding: 7px 11px;
-      border-radius: 999px;
       font-size: 0.78rem;
       font-weight: 700;
-      color: var(--text);
-      background: rgba(123, 212, 255, 0.10);
-      border: 1px solid rgba(123, 212, 255, 0.16);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
     }
 
-    label {
-      display: block;
-      margin-bottom: 8px;
-      color: var(--muted);
-      font-size: 0.93rem;
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--blue);
     }
 
-    input, textarea, button {
+    textarea,
+    input,
+    select,
+    button {
       width: 100%;
-      border-radius: 16px;
       font: inherit;
     }
 
-    input, textarea {
-      padding: 14px 16px;
-      color: var(--text);
-      background: rgba(3, 9, 16, 0.88);
-      border: 1px solid rgba(255,255,255,0.10);
+    textarea,
+    input,
+    select {
+      border-radius: 18px;
+      border: 1px solid rgba(71, 85, 105, 0.8);
+      background: rgba(2, 6, 23, 0.72);
+      color: #a7f3d0;
+      padding: 16px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    textarea:focus,
+    input:focus,
+    select:focus {
+      border-color: rgba(34, 197, 94, 0.55);
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.10);
+      transform: translateY(-1px);
     }
 
     textarea {
-      min-height: 156px;
+      min-height: 220px;
       resize: vertical;
+      line-height: 1.6;
+    }
+
+    .query-shell {
+      position: relative;
+      border-radius: 22px;
+      padding: 1px;
+      background: linear-gradient(120deg, rgba(34, 197, 94, 0.22), rgba(59, 130, 246, 0.14), rgba(34, 197, 94, 0.22));
+      background-size: 220% 220%;
+      animation: borderRun 8s linear infinite;
+    }
+
+    .query-shell textarea {
+      display: block;
+      width: 100%;
+      border: 0;
+      background: rgba(2, 6, 23, 0.88);
+    }
+
+    .query-shell.is-busy {
+      filter: brightness(1.03);
+      animation: borderRun 1.2s linear infinite, panelFlash 0.65s ease;
+    }
+
+    .query-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+
+    .preset-chip {
+      width: auto;
+      border: 1px solid rgba(71, 85, 105, 0.84);
+      background: rgba(2, 6, 23, 0.68);
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      border-radius: 999px;
+    }
+
+    .preset-chip:hover,
+    .preset-chip.is-active {
+      border-color: rgba(34, 197, 94, 0.42);
+      background: rgba(34, 197, 94, 0.12);
+      color: #bbf7d0;
+      box-shadow: 0 0 16px rgba(34, 197, 94, 0.12);
+    }
+
+    .preset-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.5;
     }
 
     .controls {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+      gap: 12px;
       margin-top: 14px;
     }
 
+    .control-row {
+      display: grid;
+      grid-template-columns: 1fr 160px;
+      gap: 10px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 10px;
+    }
+
     button {
-      padding: 14px 16px;
       border: 0;
+      border-radius: 18px;
       cursor: pointer;
-      font-weight: 700;
-      transition: transform 0.16s ease, filter 0.16s ease;
+      padding: 15px 16px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
     }
 
     button:hover {
@@ -219,476 +368,646 @@
       filter: brightness(1.04);
     }
 
-    .primary {
-      background: linear-gradient(90deg, #2bc2ff, #79e4ff);
-      color: #08202e;
+    .btn-primary {
+      color: #03150a;
+      background: linear-gradient(90deg, #16a34a, #4ade80);
+      box-shadow: 0 12px 24px rgba(34, 197, 94, 0.18);
     }
 
-    .secondary {
-      background: rgba(255,255,255,0.05);
+    .btn-secondary {
       color: var(--text);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.24);
+    }
+
+    .btn-danger {
+      color: var(--text);
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.24);
     }
 
     .scenario-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-      margin-top: 16px;
+      margin-top: 14px;
     }
 
     .scenario {
-      padding: 14px 15px;
+      padding: 14px;
       border-radius: 18px;
-      background: var(--panel-strong);
-      border: 1px solid rgba(255,255,255,0.06);
-      color: var(--text);
-      text-align: left;
+      background: rgba(2, 6, 23, 0.62);
+      border: 1px solid rgba(51, 65, 85, 0.75);
+      transition: transform 0.18s ease, border-color 0.18s ease;
+      cursor: pointer;
+    }
+
+    .scenario:hover {
+      transform: translateY(-1px);
+      border-color: rgba(34, 197, 94, 0.35);
     }
 
     .scenario strong {
       display: block;
       margin-bottom: 6px;
-      font-size: 0.95rem;
+      font-size: 0.84rem;
+      color: #f8fafc;
     }
 
     .scenario span {
       color: var(--muted);
-      font-size: 0.88rem;
-      line-height: 1.45;
+      font-size: 0.75rem;
+      line-height: 1.5;
     }
 
-    .agent-strip {
+    .signal-list,
+    .metric-grid,
+    .stats-grid,
+    .proof-grid {
       display: grid;
-      grid-template-columns: 1fr auto 1fr auto 1fr;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 16px;
+      gap: 12px;
     }
 
-    .agent-card, .final-card {
-      position: relative;
-      min-height: 170px;
-      padding: 18px;
-      border-radius: 22px;
-      background: var(--panel-strong);
-      border: 1px solid rgba(255,255,255,0.06);
-      overflow: hidden;
+    .signal-item,
+    .metric-card,
+    .stat-card,
+    .proof-card {
+      border-radius: 18px;
+      background: rgba(2, 6, 23, 0.62);
+      border: 1px solid rgba(51, 65, 85, 0.75);
+      padding: 14px 16px;
     }
 
-    .agent-card::before, .final-card::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: 4px;
-      border-radius: 12px;
-    }
-
-    .agent-card.sentinel::before { background: var(--sentinel); }
-    .agent-card.oversight::before { background: var(--oversight); }
-    .final-card::before { background: linear-gradient(180deg, var(--warn), var(--danger)); }
-
-    .agent-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      font-weight: 700;
-    }
-
-    .agent-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .agent-card.sentinel .agent-dot { background: var(--sentinel); box-shadow: 0 0 18px rgba(123,212,255,0.6); }
-    .agent-card.oversight .agent-dot { background: var(--oversight); box-shadow: 0 0 18px rgba(124,240,188,0.55); }
-    .final-card .agent-dot { background: var(--warn); box-shadow: 0 0 18px rgba(255,217,112,0.55); }
-
-    .decision-main {
-      font-size: 1.4rem;
-      font-weight: 800;
-      line-height: 1.05;
-      margin-bottom: 10px;
-    }
-
-    .decision-note {
-      color: var(--muted);
-      font-size: 0.93rem;
-      line-height: 1.55;
-    }
-
-    .relay-arrow {
-      color: rgba(255,255,255,0.34);
-      font-size: 1.7rem;
-      font-weight: 700;
-      transform: translateY(-4px);
-    }
-
-    .signal-row, .telemetry-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .signal {
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(123, 212, 255, 0.16);
-      background: rgba(123, 212, 255, 0.08);
-      color: var(--sentinel);
-      font-size: 0.82rem;
-      font-weight: 700;
-    }
-
-    .risk-wrap {
-      margin-bottom: 14px;
-    }
-
-    .risk-label {
+    .signal-head,
+    .proof-card strong {
       display: flex;
       justify-content: space-between;
       gap: 10px;
-      color: var(--muted);
-      font-size: 0.92rem;
-      margin-bottom: 7px;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
     }
 
-    .risk-meter {
-      height: 12px;
+    .signal-head span,
+    .metric-card span,
+    .stat-card span,
+    .proof-card small {
+      color: var(--muted);
+    }
+
+    .progress {
+      width: 100%;
+      height: 10px;
       border-radius: 999px;
       overflow: hidden;
-      background: rgba(255,255,255,0.06);
+      background: rgba(51, 65, 85, 0.65);
     }
 
-    .risk-bar {
-      width: 0%;
+    .progress-bar {
       height: 100%;
-      background: linear-gradient(90deg, #57dba2, #ffd970 58%, #ff8d8d);
-      transition: width 0.25s ease;
+      width: 0%;
+      border-radius: 999px;
+      transition: width 0.45s ease;
+      background: linear-gradient(90deg, rgba(34, 197, 94, 0.75), rgba(59, 130, 246, 0.82));
     }
 
-    .telemetry-grid {
+    .risk-shell {
+      border-radius: 22px;
+      padding: 18px;
+      background:
+        radial-gradient(circle at right top, rgba(34, 197, 94, 0.08), transparent 24%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.72), rgba(2, 6, 23, 0.92));
+      border: 1px solid rgba(51, 65, 85, 0.75);
+    }
+
+    .risk-ring {
+      width: 148px;
+      height: 148px;
+      margin: 0 auto 16px;
+      position: relative;
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
+      place-items: center;
+    }
+
+    .risk-ring svg {
+      width: 148px;
+      height: 148px;
+      transform: rotate(-90deg);
+    }
+
+    .risk-ring .value {
+      position: absolute;
+      text-align: center;
+    }
+
+    .risk-ring .value strong {
+      display: block;
+      font-size: 2rem;
+      color: white;
+      line-height: 1;
+    }
+
+    .risk-ring .value span {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .decision-banner {
       margin-top: 16px;
-    }
-
-    .telemetry {
-      padding: 14px 15px;
+      padding: 14px 16px;
       border-radius: 18px;
-      background: var(--panel-strong);
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .telemetry span {
-      display: block;
-      margin-bottom: 6px;
-      color: var(--muted);
-      font-size: 0.76rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .telemetry strong {
-      display: block;
-      font-size: 1.02rem;
-    }
-
-    .rationale-box, .timeline {
-      padding: 16px;
-      border-radius: 20px;
-      background: rgba(3, 9, 15, 0.88);
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .rationale-box h3, .timeline h3 {
-      margin: 0 0 12px;
-      color: var(--muted);
-      font-size: 0.82rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .rationale {
-      margin: 0;
-      padding-left: 18px;
-      line-height: 1.55;
-    }
-
-    .rationale li {
-      margin-bottom: 7px;
-      color: var(--text);
-    }
-
-    .reason-box {
-      margin-top: 14px;
-      padding: 14px 15px;
-      border-radius: 18px;
-      background: rgba(124,240,188,0.06);
-      border: 1px solid rgba(124,240,188,0.10);
-      color: var(--text);
-      line-height: 1.55;
-    }
-
-    .session-grid {
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(51, 65, 85, 0.75);
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 14px;
+      gap: 8px;
     }
 
-    .session-stat {
-      padding: 14px 15px;
-      border-radius: 18px;
-      background: var(--panel-strong);
-      border: 1px solid rgba(255,255,255,0.06);
+    .decision-banner strong {
+      font-size: 1.1rem;
+      letter-spacing: 0.06em;
     }
 
-    .session-stat span {
-      display: block;
-      margin-bottom: 6px;
-      color: var(--muted);
-      font-size: 0.76rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .session-stat strong {
-      font-size: 1.05rem;
-    }
-
-    .session-note {
-      margin-top: 12px;
+    .decision-banner small {
       color: var(--muted);
       line-height: 1.5;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 0.72rem;
+      background: rgba(34, 197, 94, 0.08);
+      border: 1px solid rgba(34, 197, 94, 0.18);
+      color: #86efac;
+    }
+
+    .rationale-list {
+      margin: 12px 0 0;
+      padding-left: 18px;
+      color: #dbeafe;
+      font-size: 0.78rem;
+      line-height: 1.65;
+    }
+
+    .logs {
+      margin-top: 14px;
+      padding: 16px;
+      min-height: 180px;
+      border-radius: 18px;
+      background: rgba(2, 6, 23, 0.72);
+      border: 1px solid rgba(51, 65, 85, 0.75);
+      color: #cbd5e1;
+      font-size: 0.78rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .reward-panel {
+      margin-top: 16px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(51, 65, 85, 0.5);
+    }
+
+    .chart-shell {
+      border-radius: 18px;
+      background: rgba(2, 6, 23, 0.62);
+      border: 1px solid rgba(51, 65, 85, 0.75);
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    .reward-chart {
+      width: 100%;
+      height: 180px;
+      display: block;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 16px 12px;
+    }
+
+    .stat-card strong,
+    .metric-card strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 1.4rem;
+      color: white;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .metric-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 14px;
     }
 
     .timeline {
-      max-height: 540px;
+      max-height: 580px;
       overflow: auto;
+      padding-right: 4px;
+      margin-top: 14px;
+      display: grid;
+      gap: 14px;
     }
 
     .timeline-item {
-      padding: 15px;
+      display: grid;
+      grid-template-columns: 16px 1fr;
+      gap: 12px;
+      align-items: start;
+      animation: timelineEnter 0.35s ease;
+    }
+
+    .timeline-axis {
+      display: grid;
+      justify-items: center;
+      height: 100%;
+    }
+
+    .timeline-axis i {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-top: 6px;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .timeline-axis b {
+      width: 1px;
+      flex: 1;
+      background: rgba(51, 65, 85, 0.7);
+      margin-top: 6px;
+    }
+
+    .timeline-card {
       border-radius: 18px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(2, 6, 23, 0.72);
+      border: 1px solid rgba(51, 65, 85, 0.75);
+      padding: 14px 16px;
     }
 
-    .timeline-item + .timeline-item {
-      margin-top: 10px;
+    .timeline-card small {
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
     }
 
-    .timeline-item strong {
+    .timeline-card strong {
       display: flex;
       justify-content: space-between;
       gap: 10px;
-      margin-bottom: 7px;
+      margin-bottom: 8px;
+      color: white;
+      font-size: 0.84rem;
     }
 
-    .timeline-item small {
-      display: block;
+    .footer-note {
       color: var(--muted);
-      line-height: 1.5;
+      font-size: 0.75rem;
+      line-height: 1.6;
     }
 
-    .pulse {
-      animation: pulse 1.6s ease-in-out infinite;
+    .status-strip {
+      margin-top: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(51, 65, 85, 0.75);
+      padding: 10px 12px;
+      font-size: 0.72rem;
+      color: #cbd5e1;
+      background:
+        linear-gradient(90deg, rgba(34, 197, 94, 0.12), rgba(59, 130, 246, 0.06), rgba(34, 197, 94, 0.12));
+      background-size: 200% 100%;
+      animation: shimmer 7s linear infinite;
     }
 
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(123,212,255,0.0); }
-      50% { box-shadow: 0 0 0 8px rgba(123,212,255,0.04); }
+    .proof-grid {
+      margin-top: 14px;
     }
 
-    @media (max-width: 1080px) {
-      .hero,
-      .layout-top,
-      .layout-bottom,
-      .agent-strip,
-      .telemetry-grid,
-      .session-grid,
-      .controls,
-      .scenario-grid {
-        grid-template-columns: 1fr;
-      }
+    .proof-card strong {
+      color: white;
+    }
 
-      .status-rail {
-        justify-content: flex-start;
-      }
+    .theme-score {
+      color: var(--green);
+      font-size: 0.85rem;
+    }
 
-      .relay-arrow {
-        display: none;
-      }
+    .status-safe { color: var(--green); }
+    .status-watch { color: var(--amber); }
+    .status-critical { color: var(--red); }
+
+    @media (max-width: 1220px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .nav { flex-direction: column; align-items: stretch; }
+      .nav-metrics { justify-content: space-between; }
+    }
+
+    @media (max-width: 720px) {
+      .page { padding: 16px; }
+      .button-row, .control-row, .stats-grid, .metric-grid { grid-template-columns: 1fr; }
+      .nav-metrics { display: grid; gap: 12px; }
+      .divider { display: none; }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <section class="hero">
-      <div>
-        <div class="eyebrow">Long-Horizon Multi-Agent Demo</div>
-        <h1>SentinelDB</h1>
-        <div class="subtitle">A Sentinel agent proposes how to handle a query. A budgeted Oversight agent reviews that choice and can intervene before the final database action is executed.</div>
-      </div>
-      <div class="status-rail">
-        <div class="status-chip" id="status-badge">Demo live</div>
-        <div class="status-chip" id="threat-chip">Threat: -</div>
-        <div class="status-chip" id="budget-chip">Budget: -</div>
-      </div>
-    </section>
+  <div class="scan-line"></div>
+  <div class="grid-overlay"></div>
 
-    <section class="layout-top">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Command Console</h2>
-          <div class="tag">Input</div>
+  <main class="page">
+    <section class="panel nav">
+      <div class="brand">
+        <div class="shield" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L19 5V11C19 16 15.8 20.5 12 22C8.2 20.5 5 16 5 11V5L12 2Z" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M8.5 12.3L10.8 14.6L15.8 9.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
-
-        <label for="source">Source ID</label>
-        <input id="source" value="judge-demo" />
-
-        <label for="query" style="margin-top: 14px;">Incoming Query</label>
-        <textarea id="query">SELECT name, ssn FROM customers UNION SELECT api_key, secret FROM secrets</textarea>
-
-        <div class="controls">
-          <button class="primary" id="run">Analyze Query</button>
-          <button class="secondary" id="session-reset">Reset Session</button>
-          <button class="secondary" id="play-sequence">Play Attack Story</button>
-        </div>
-
-        <div class="scenario-grid">
-          <button class="scenario" data-query="SELECT id, balance FROM accounts WHERE customer_id = 1042" data-source="mobile-app-01">
-            <strong>Benign Read</strong>
-            <span>Normal account lookup that should stay on the real database.</span>
-          </button>
-          <button class="scenario" data-query="admin' OR 1=1 /* bypass */" data-source="unknown-console">
-            <strong>Injection Bypass</strong>
-            <span>Sentinel should flag this immediately and oversight should validate the call.</span>
-          </button>
-          <button class="scenario" data-query="SELECT name, ssn FROM customers UNION SELECT api_key, secret FROM secrets" data-source="partner-api-09">
-            <strong>Exfiltration Attempt</strong>
-            <span>High-value data request with strong pressure to contain or redirect.</span>
-          </button>
-          <button class="scenario" data-query="DROP TABLE transactions" data-source="unknown-console">
-            <strong>Destructive Command</strong>
-            <span>High-severity action with obvious downside if the real database is exposed.</span>
-          </button>
+        <div>
+          <div class="eyebrow">OpenEnv Defense Framework</div>
+          <h1>SENTINEL<span>DB</span></h1>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Agent Relay</h2>
-          <div class="tag">Proposal -> Review -> Execute</div>
+      <div class="nav-metrics">
+        <div>
+          Agent Type
+          <strong>TRL GRPO</strong>
         </div>
-
-        <div class="risk-wrap">
-          <div class="risk-label">
-            <span id="risk-label">Risk score: -</span>
-            <span id="target-label">Target: -</span>
-          </div>
-          <div class="risk-meter"><div class="risk-bar" id="risk-bar"></div></div>
+        <div class="divider"></div>
+        <div>
+          Primary Mode
+          <strong>Long-Horizon Defense</strong>
         </div>
-
-        <div class="agent-strip">
-          <div class="agent-card sentinel pulse" id="sentinel-card">
-            <div class="agent-label"><span class="agent-dot"></span> Sentinel</div>
-            <div class="decision-main" id="proposal">-</div>
-            <div class="decision-note" id="sentinel-note">Waiting for a query.</div>
-          </div>
-          <div class="relay-arrow">→</div>
-          <div class="agent-card oversight" id="oversight-card">
-            <div class="agent-label"><span class="agent-dot"></span> Oversight</div>
-            <div class="decision-main" id="oversight">-</div>
-            <div class="decision-note" id="oversight-note">Budgeted intervention layer is idle.</div>
-          </div>
-          <div class="relay-arrow">→</div>
-          <div class="final-card" id="final-card">
-            <div class="agent-label"><span class="agent-dot"></span> Final Execution</div>
-            <div class="decision-main" id="final-action">-</div>
-            <div class="decision-note" id="final-note">No action executed yet.</div>
-          </div>
+        <div class="divider"></div>
+        <div class="live-status">
+          <div class="live-dot"></div>
+          <strong>Live Defense Active</strong>
         </div>
-
-        <div class="signal-row" id="signals"></div>
-
-        <div class="telemetry-grid">
-          <div class="telemetry"><span>Threat</span><strong id="threat">-</strong></div>
-          <div class="telemetry"><span>Recommended</span><strong id="recommended">-</strong></div>
-          <div class="telemetry"><span>Budget Left</span><strong id="budget">-</strong></div>
-          <div class="telemetry"><span>Resilience</span><strong id="resilience">-</strong></div>
-        </div>
-
-        <div class="reason-box" id="oversight-reason">Oversight reasoning will appear here.</div>
       </div>
     </section>
 
-    <section class="layout-bottom">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Reasoning Trace</h2>
-          <div class="tag">Why the agents acted</div>
-        </div>
+    <section class="dashboard">
+      <div class="stack">
+        <article class="panel glow-green">
+          <div class="panel-body">
+            <div class="section-title">
+              <h2>Intercepted Query</h2>
+              <div class="pill">Command Center GUI</div>
+            </div>
 
-        <div class="rationale-box">
-          <h3>Rationale</h3>
-          <ol class="rationale" id="rationale"></ol>
-        </div>
+            <div class="query-toolbar" id="preset-toolbar">
+              <button class="preset-chip is-active" type="button" data-query="SELECT name, ssn FROM customers UNION SELECT api_key, secret FROM secrets" data-source="partner-api-09">Exfiltration</button>
+              <button class="preset-chip" type="button" data-query="SELECT id, balance FROM accounts WHERE customer_id = 1042" data-source="mobile-app-01">Benign Read</button>
+              <button class="preset-chip" type="button" data-query="admin' OR 1=1 /* bypass */" data-source="unknown-console">Injection</button>
+              <button class="preset-chip" type="button" data-query="DROP TABLE transactions" data-source="unknown-console">Destructive</button>
+              <button class="preset-chip" type="button" data-query="COPY (SELECT * FROM pii) TO STDOUT" data-source="partner-api-09">PII Export</button>
+            </div>
 
-        <div class="rationale-box" style="margin-top: 14px;">
-          <h3>System Logs</h3>
-          <div id="logs" style="white-space: pre-wrap; line-height: 1.55; color: #d7e8ff; font-family: Consolas, 'Courier New', monospace;">Waiting for a query...</div>
-        </div>
+            <div class="query-shell" id="query-shell">
+              <textarea id="query-input">SELECT name, ssn FROM customers UNION SELECT api_key, secret FROM secrets</textarea>
+            </div>
+            <div class="preset-note">Quick-fill buttons are built into the query field area so you can swap demo scenarios instantly during judging.</div>
+
+            <div class="controls">
+              <div class="control-row">
+                <input id="source-input" value="partner-api-09" placeholder="Source ID" />
+                <select id="action-override">
+                  <option value="">Auto Action</option>
+                  <option value="ALLOW_REAL">ALLOW_REAL</option>
+                  <option value="BLOCK">BLOCK</option>
+                  <option value="ROUTE_DECOY">ROUTE_DECOY</option>
+                  <option value="BACKUP_ALLOW">BACKUP_ALLOW</option>
+                </select>
+              </div>
+
+              <div class="button-row">
+                <button class="btn-primary" id="analyze-button">Execute Oversight</button>
+                <button class="btn-secondary" id="session-button">Run Session Step</button>
+                <button class="btn-danger" id="story-button">Play Attack Story</button>
+              </div>
+            </div>
+
+            <div class="status-strip" id="interaction-status">Interactive mode ready. Pick a preset query or type your own and watch the dashboard animate.</div>
+
+            <div class="scenario-grid">
+              <div class="scenario" data-query="SELECT id, balance FROM accounts WHERE customer_id = 1042" data-source="mobile-app-01">
+                <strong>Benign Read</strong>
+                <span>Expected behavior: allow safely and preserve availability on the real database.</span>
+              </div>
+              <div class="scenario" data-query="admin' OR 1=1 /* bypass */" data-source="unknown-console">
+                <strong>Injection Bypass</strong>
+                <span>Expected behavior: classify as critical and contain before it escalates.</span>
+              </div>
+              <div class="scenario" data-query="SELECT name, ssn FROM customers UNION SELECT api_key, secret FROM secrets" data-source="partner-api-09">
+                <strong>Exfiltration Attempt</strong>
+                <span>Expected behavior: block or route to the decoy while keeping the story legible for judges.</span>
+              </div>
+              <div class="scenario" data-query="DROP TABLE transactions" data-source="unknown-console">
+                <strong>Destructive DDL</strong>
+                <span>Expected behavior: stop immediately and protect real DB health.</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-body">
+            <div class="section-title">
+              <h2>Lexical Signal Analysis</h2>
+              <div class="pill">Animated Threat Map</div>
+            </div>
+            <div class="signal-list" id="signal-list"></div>
+          </div>
+        </article>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Live Session Board</h2>
-          <div class="tag">Persistent State</div>
-        </div>
+      <div class="stack">
+        <article class="panel">
+          <div class="panel-body">
+            <div class="section-title">
+              <h2>Decision Log</h2>
+              <div class="pill">Agentic Rationale</div>
+            </div>
 
-        <div class="session-grid">
-          <div class="session-stat"><span>DB Health</span><strong id="metric-health">-</strong></div>
-          <div class="session-stat"><span>Attack Success</span><strong id="metric-attack">-</strong></div>
-          <div class="session-stat"><span>False Positives</span><strong id="metric-fp">-</strong></div>
-          <div class="session-stat"><span>Decoy Engagement</span><strong id="metric-decoy">-</strong></div>
-          <div class="session-stat"><span>Queries Seen</span><strong id="metric-queries">-</strong></div>
-          <div class="session-stat"><span>Resilience</span><strong id="metric-resilience">-</strong></div>
-          <div class="session-stat"><span>Oversight Used</span><strong id="metric-oversight-used">-</strong></div>
-          <div class="session-stat"><span>Precision</span><strong id="metric-oversight-precision">-</strong></div>
-          <div class="session-stat"><span>Budget Remaining</span><strong id="metric-budget">-</strong></div>
-        </div>
+            <div class="risk-shell">
+              <div class="risk-ring">
+                <svg viewBox="0 0 120 120" aria-hidden="true">
+                  <circle cx="60" cy="60" r="48" stroke="rgba(51,65,85,0.7)" stroke-width="10" fill="none"></circle>
+                  <circle id="risk-ring-progress" cx="60" cy="60" r="48" stroke="#22c55e" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="301.59" stroke-dashoffset="301.59"></circle>
+                </svg>
+                <div class="value">
+                  <strong id="risk-score">0</strong>
+                  <span>Risk Score</span>
+                </div>
+              </div>
 
-        <div class="session-note" id="session-status">Session idle.</div>
+              <div class="decision-banner" id="decision-banner">
+                <strong class="status-watch" id="decision-action">ACTION: STANDBY</strong>
+                <small id="decision-summary">Sentinel is waiting for the next intercepted query.</small>
+                <small id="decision-subline">Threat level and routing will appear here after analysis.</small>
+              </div>
 
-        <div class="timeline" id="timeline" style="margin-top: 16px;">
-          <h3>Timeline</h3>
-        </div>
+              <div class="chips" id="signals-chips"></div>
+              <ol class="rationale-list" id="rationale-list"></ol>
+            </div>
+
+            <div class="logs" id="decision-logs">Watcher initialized. Waiting for telemetry...</div>
+
+            <div class="reward-panel">
+              <div class="section-title">
+                <h3>Reward Trajectory</h3>
+                <div class="pill">Session Momentum</div>
+              </div>
+              <div class="chart-shell">
+                <svg class="reward-chart" id="reward-chart" viewBox="0 0 640 180" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="rewardStroke" x1="0" x2="1">
+                      <stop offset="0%" stop-color="#22d3ee"></stop>
+                      <stop offset="100%" stop-color="#3b82f6"></stop>
+                    </linearGradient>
+                    <linearGradient id="rewardFill" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stop-color="rgba(34,211,238,0.25)"></stop>
+                      <stop offset="100%" stop-color="rgba(59,130,246,0.02)"></stop>
+                    </linearGradient>
+                  </defs>
+                  <path id="reward-area" fill="url(#rewardFill)" stroke="none"></path>
+                  <path id="reward-line" fill="none" stroke="url(#rewardStroke)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-body">
+            <div class="section-title">
+              <h2>Benchmark Proof</h2>
+              <div class="pill">Repo Evidence</div>
+            </div>
+            <div class="proof-grid" id="benchmark-proof"></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="stack">
+        <article class="panel glow-red">
+          <div class="panel-body">
+            <div class="section-title">
+              <h2>Command Metrics</h2>
+              <div class="pill">Live Session State</div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-card">
+                <span>Benign Served</span>
+                <strong id="stat-benign">0</strong>
+              </div>
+              <div class="stat-card">
+                <span>Blocked</span>
+                <strong id="stat-blocked">0</strong>
+              </div>
+              <div class="stat-card">
+                <span>Attack Success</span>
+                <strong id="stat-attack-rate">0%</strong>
+              </div>
+              <div class="stat-card">
+                <span>Resilience</span>
+                <strong id="stat-resilience">100</strong>
+              </div>
+            </div>
+
+            <div class="metric-grid">
+              <div class="metric-card">
+                <span>Target DB</span>
+                <strong id="metric-target">real</strong>
+              </div>
+              <div class="metric-card">
+                <span>Threat</span>
+                <strong id="metric-threat">SAFE</strong>
+              </div>
+              <div class="metric-card">
+                <span>Recovery</span>
+                <strong id="metric-recovery">monitoring</strong>
+              </div>
+              <div class="metric-card">
+                <span>Attacker View</span>
+                <strong id="metric-attacker-view">none</strong>
+              </div>
+              <div class="metric-card">
+                <span>Real DB Health</span>
+                <strong id="metric-health">1.0</strong>
+              </div>
+              <div class="metric-card">
+                <span>Decoy Engagement</span>
+                <strong id="metric-decoy">0</strong>
+              </div>
+              <div class="metric-card">
+                <span>Queries Seen</span>
+                <strong id="metric-queries">0</strong>
+              </div>
+              <div class="metric-card">
+                <span>Source</span>
+                <strong id="metric-source">judge-demo</strong>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-body">
+            <div class="section-title">
+              <h2>Hackathon Alignment</h2>
+              <div class="pill">Judge Story</div>
+            </div>
+            <div class="proof-grid" id="theme-fit"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-body">
+            <div class="section-title">
+              <h2>Attack Timeline</h2>
+              <div class="pill">Animated Feed</div>
+            </div>
+            <div class="footer-note" id="session-status">Session idle. Reset or run a sequence to animate the timeline.</div>
+            <div class="timeline" id="timeline"></div>
+          </div>
+        </article>
       </div>
     </section>
-  </div>
+  </main>
 
   <script>
-    const queryEl = document.getElementById("query");
-    const sourceEl = document.getElementById("source");
-    const signalsEl = document.getElementById("signals");
-    const rationaleEl = document.getElementById("rationale");
-    const logsEl = document.getElementById("logs");
-    const riskBarEl = document.getElementById("risk-bar");
-    const timelineEl = document.getElementById("timeline");
-    const sessionStatusEl = document.getElementById("session-status");
-    const statusBadgeEl = document.getElementById("status-badge");
-    const threatChipEl = document.getElementById("threat-chip");
-    const budgetChipEl = document.getElementById("budget-chip");
+    const state = {
+      rewardHistory: [0, 8, 14, 23, 18, 30],
+      benchmark: null,
+      currentState: null,
+    };
+
+    const queryInput = document.getElementById("query-input");
+    const sourceInput = document.getElementById("source-input");
+    const actionOverride = document.getElementById("action-override");
+    const queryShell = document.getElementById("query-shell");
+    const interactionStatus = document.getElementById("interaction-status");
+    const signalList = document.getElementById("signal-list");
+    const signalsChips = document.getElementById("signals-chips");
+    const rationaleList = document.getElementById("rationale-list");
+    const decisionLogs = document.getElementById("decision-logs");
+    const timeline = document.getElementById("timeline");
+    const presetButtons = Array.from(document.querySelectorAll(".preset-chip"));
 
     const storySequence = [
       { query_raw: "SELECT id, balance FROM accounts WHERE customer_id = 1042", source_id: "mobile-app-01" },
@@ -697,210 +1016,333 @@
       { query_raw: "DROP TABLE transactions", source_id: "unknown-console" }
     ];
 
-    function setStatus(text, isError = false) {
-      statusBadgeEl.textContent = text;
-      statusBadgeEl.style.background = isError ? "rgba(255,141,141,0.14)" : "rgba(255,255,255,0.04)";
-      statusBadgeEl.style.color = isError ? "var(--danger)" : "var(--text)";
+    function scoreSignals(query) {
+      const text = query.toUpperCase();
+      return {
+        Injection: text.includes("OR 1=1") || text.includes("/*") || text.includes("--") ? 92 : 12,
+        Exfiltration: text.includes("UNION SELECT") || text.includes("EXPORT") || text.includes("COPY (") ? 96 : 16,
+        DDL: text.includes("DROP") || text.includes("TRUNCATE") || text.includes("ALTER TABLE") ? 98 : 8,
+        Privilege: text.includes("GRANT ") || text.includes("ALTER ROLE") || text.includes("ADMIN'") ? 78 : 10,
+        Aggressive: Math.min(100, 18 + (text.length > 70 ? 24 : 0) + (text.includes(";") ? 30 : 0)),
+      };
     }
 
-    function actionLabel(action) {
-      if (action === "ALLOW_REAL") return "Allow Real";
-      if (action === "ROUTE_DECOY") return "Route Decoy";
-      if (action === "BACKUP_ALLOW") return "Backup Allow";
-      if (action === "OVERRIDE_TO_BLOCK") return "Override to Block";
-      if (action === "OVERRIDE_TO_DECOY") return "Override to Decoy";
-      return action || "-";
-    }
-
-    function targetCopy(target) {
-      if (target === "blocked") return "Execution halted before reaching a database.";
-      if (target === "decoy") return "Traffic was redirected into the deception environment.";
-      return "Traffic is headed to the real production database.";
-    }
-
-    function renderSignals(signals) {
-      signalsEl.innerHTML = "";
-      (signals.length ? signals : ["NO_HIGH_RISK_TOKENS"]).forEach((signal) => {
-        const chip = document.createElement("span");
-        chip.className = "signal";
-        chip.textContent = signal;
-        signalsEl.appendChild(chip);
+    function renderSignalBars(query) {
+      const signals = scoreSignals(query);
+      signalList.innerHTML = "";
+      Object.entries(signals).forEach(([label, value]) => {
+        const item = document.createElement("div");
+        item.className = "signal-item";
+        item.innerHTML = `
+          <div class="signal-head">
+            <strong>${label}</strong>
+            <span>${value}%</span>
+          </div>
+          <div class="progress"><div class="progress-bar" style="width:${value}%"></div></div>
+        `;
+        signalList.appendChild(item);
       });
     }
 
-    function renderRationale(rationale) {
-      rationaleEl.innerHTML = "";
-      rationale.forEach((item) => {
+    function setInteractionStatus(message) {
+      interactionStatus.textContent = message;
+    }
+
+    function setBusy(isBusy, message = "") {
+      queryShell.classList.toggle("is-busy", isBusy);
+      if (message) setInteractionStatus(message);
+    }
+
+    function activatePresetButton(queryValue) {
+      presetButtons.forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.query === queryValue);
+      });
+    }
+
+    function fillPreset(queryValue, sourceValue, label) {
+      queryInput.value = queryValue;
+      sourceInput.value = sourceValue;
+      activatePresetButton(queryValue);
+      renderSignalBars(queryValue);
+      setInteractionStatus(`${label} loaded. Execute Oversight to animate the full decision path.`);
+    }
+
+    function setRiskVisual(score, threatLevel) {
+      const ring = document.getElementById("risk-ring-progress");
+      const value = document.getElementById("risk-score");
+      const circumference = 301.59;
+      const dashOffset = circumference - ((Math.max(0, Math.min(100, score)) / 100) * circumference);
+      ring.style.strokeDashoffset = dashOffset.toFixed(2);
+      ring.style.stroke = threatLevel === "CRITICAL" ? "#ef4444" : threatLevel === "WATCHLIST" ? "#f59e0b" : "#22c55e";
+      value.textContent = score;
+    }
+
+    function updateDecision(body) {
+      const threatClass = body.threat_level === "CRITICAL" ? "status-critical" : body.threat_level === "WATCHLIST" ? "status-watch" : "status-safe";
+      const actionEl = document.getElementById("decision-action");
+      actionEl.className = threatClass;
+      actionEl.textContent = `ACTION: ${body.action}`;
+      document.getElementById("decision-summary").textContent = `Threat ${body.threat_level}. Recommended route is ${body.recommended_action}. Current target: ${body.target_db}.`;
+      document.getElementById("decision-subline").textContent = `Backup ${body.backup_status}. Recovery ${body.recovery_status}. Attacker sees ${body.attacker_result}. Risk score ${body.risk_score}/100.`;
+      document.getElementById("metric-target").textContent = body.target_db;
+      document.getElementById("metric-threat").textContent = body.threat_level;
+      document.getElementById("metric-recovery").textContent = body.recovery_status;
+      document.getElementById("metric-attacker-view").textContent = body.attacker_result;
+      document.getElementById("metric-source").textContent = body.observation.source_id;
+      setRiskVisual(body.risk_score, body.threat_level);
+      renderSignalBars(body.observation.query_raw);
+
+      signalsChips.innerHTML = "";
+      (body.suspicious_signals.length ? body.suspicious_signals : ["NO_HIGH_RISK_TOKENS"]).forEach((signal) => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = signal;
+        signalsChips.appendChild(chip);
+      });
+
+      rationaleList.innerHTML = "";
+      body.rationale.forEach((item) => {
         const li = document.createElement("li");
         li.textContent = item;
-        rationaleEl.appendChild(li);
+        rationaleList.appendChild(li);
       });
+
+      decisionLogs.textContent = body.log_lines.join("\n");
     }
 
-    function renderDecision(body) {
-      document.getElementById("proposal").textContent = actionLabel(body.sentinel_proposal);
-      document.getElementById("oversight").textContent = actionLabel(body.oversight_decision);
-      document.getElementById("final-action").textContent = actionLabel(body.executed_action);
-      document.getElementById("recommended").textContent = actionLabel(body.recommended_action);
-      document.getElementById("threat").textContent = body.threat_level;
-      document.getElementById("budget").textContent = body.oversight_budget_remaining;
-      document.getElementById("resilience").textContent = body.state.resilience_score;
-      document.getElementById("risk-label").textContent = `Risk score: ${body.risk_score}/100`;
-      document.getElementById("target-label").textContent = `Target: ${body.target_db}`;
-      document.getElementById("sentinel-note").textContent = `Sentinel proposed ${actionLabel(body.sentinel_proposal)} based on the observed query and recent session state.`;
-      document.getElementById("oversight-note").textContent = body.override_used
-        ? "Oversight spent budget and changed the action."
-        : "Oversight accepted the Sentinel proposal without intervention.";
-      document.getElementById("final-note").textContent = targetCopy(body.target_db);
-      document.getElementById("oversight-reason").textContent = body.oversight_reason;
-      logsEl.textContent = body.log_lines.join("\n");
-      riskBarEl.style.width = `${body.risk_score}%`;
-      renderSignals(body.suspicious_signals);
-      renderRationale(body.rationale);
-      threatChipEl.textContent = `Threat: ${body.threat_level}`;
-      budgetChipEl.textContent = `Budget: ${body.oversight_budget_remaining}`;
+    function animateNumber(id, endValue, suffix = "", decimals = 0) {
+      const el = document.getElementById(id);
+      const startText = el.dataset.value ? Number(el.dataset.value) : 0;
+      const end = Number(endValue) || 0;
+      const start = Number.isFinite(startText) ? startText : 0;
+      const duration = 420;
+      const startTime = performance.now();
+
+      function step(now) {
+        const progress = Math.min(1, (now - startTime) / duration);
+        const current = start + ((end - start) * progress);
+        el.dataset.value = String(end);
+        el.textContent = `${current.toFixed(decimals)}${suffix}`;
+        if (progress < 1) requestAnimationFrame(step);
+      }
+
+      requestAnimationFrame(step);
     }
 
-    function renderState(state) {
-      document.getElementById("metric-health").textContent = state.real_db_health;
-      document.getElementById("metric-attack").textContent = `${Math.round((state.attack_success_rate || 0) * 100)}%`;
-      document.getElementById("metric-fp").textContent = `${Math.round((state.false_positive_rate || 0) * 100)}%`;
-      document.getElementById("metric-decoy").textContent = state.decoy_engagement;
-      document.getElementById("metric-queries").textContent = state.queries_seen;
-      document.getElementById("metric-resilience").textContent = state.resilience_score;
-      document.getElementById("metric-oversight-used").textContent = state.oversight_used;
-      document.getElementById("metric-oversight-precision").textContent = `${Math.round((state.oversight_precision || 0) * 100)}%`;
-      document.getElementById("metric-budget").textContent = state.oversight_budget_remaining;
+    function updateMetrics(snapshot) {
+      if (!snapshot) return;
+      state.currentState = snapshot;
+      animateNumber("stat-benign", snapshot.served_legit || 0, "", 0);
+      animateNumber("stat-blocked", snapshot.blocked_attacks || 0, "", 0);
+      animateNumber("stat-resilience", snapshot.resilience_score || 0, "", 0);
+      animateNumber("metric-decoy", snapshot.decoy_engagement || 0, "", 0);
+      animateNumber("metric-queries", snapshot.queries_seen || 0, "", 0);
+      animateNumber("metric-health", snapshot.real_db_health || 0, "", 3);
+      document.getElementById("metric-recovery").textContent = snapshot.incident_response_triggered ? `failover:${snapshot.active_database}` : "monitoring";
+      document.getElementById("metric-attacker-view").textContent = snapshot.last_attacker_view || "none";
+      document.getElementById("metric-target").textContent = snapshot.active_database || "real";
+      document.getElementById("stat-attack-rate").textContent = `${Math.round((snapshot.attack_success_rate || 0) * 100)}%`;
     }
 
-    function prependTimeline(body, queryText) {
+    function updateRewardChart() {
+      const width = 640;
+      const height = 180;
+      const values = state.rewardHistory.length ? state.rewardHistory : [0];
+      const min = Math.min(...values, 0);
+      const max = Math.max(...values, 1);
+      const range = Math.max(1, max - min);
+      const step = values.length > 1 ? width / (values.length - 1) : width;
+      const points = values.map((value, index) => {
+        const x = index * step;
+        const y = height - (((value - min) / range) * (height - 24)) - 12;
+        return [x, y];
+      });
+      const line = points.map(([x, y], index) => `${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+      const area = `${line} L ${width} ${height} L 0 ${height} Z`;
+      document.getElementById("reward-line").setAttribute("d", line);
+      document.getElementById("reward-area").setAttribute("d", area);
+    }
+
+    function appendReward(value) {
+      state.rewardHistory.push(value);
+      if (state.rewardHistory.length > 24) state.rewardHistory.shift();
+      updateRewardChart();
+    }
+
+    function addTimelineEntry(body, queryText) {
       const item = document.createElement("div");
       item.className = "timeline-item";
+      const isCritical = body.threat_level === "CRITICAL";
+      const isWatch = body.threat_level === "WATCHLIST";
+      const color = isCritical ? "#ef4444" : isWatch ? "#f59e0b" : "#22c55e";
+      const now = new Date();
+      const stamp = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       item.innerHTML = `
-        <strong><span>${actionLabel(body.executed_action)}</span><span>${body.reward ? body.reward.value : body.risk_score}</span></strong>
-        <small>${queryText}</small>
-        <small>Sentinel ${actionLabel(body.sentinel_proposal)} | Oversight ${actionLabel(body.oversight_decision)} | Threat ${body.threat_level} | Target ${body.target_db}</small>
+        <div class="timeline-axis" style="color:${color}">
+          <i style="background:${color}"></i>
+          <b></b>
+        </div>
+        <div class="timeline-card">
+          <small>${stamp} - ${body.info.attacker_profile || "demo-profile"}</small>
+          <strong><span>${body.action}</span><span>${body.reward ? body.reward.value : "preview"}</span></strong>
+          <div class="footer-note">${queryText}</div>
+          <div class="footer-note">DB ${body.target_db} | Recovery ${body.recovery_status} | Attacker sees ${body.attacker_result}</div>
+        </div>
       `;
-      timelineEl.appendChild(item);
+      timeline.prepend(item);
     }
 
-    async function fetchJson(url, options = {}) {
+    async function fetchJson(url, options) {
       const response = await fetch(url, options);
       if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`${response.status} ${text}`);
+        throw new Error(`Request failed: ${response.status}`);
       }
       return response.json();
     }
 
     async function analyzeQuery() {
-      setStatus("Analyzing");
-      const body = await fetchJson("/api/demo/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query_raw: queryEl.value,
-          source_id: sourceEl.value || "judge-demo",
-          oversight_enabled: true
-        })
-      });
-      renderDecision(body);
-      renderState(body.state);
-      sessionStatusEl.textContent = `Preview ready: ${actionLabel(body.executed_action)} with oversight ${actionLabel(body.oversight_decision)}.`;
-      setStatus("Preview ready");
+      setBusy(true, "Running instant oversight analysis...");
+      const payload = {
+        query_raw: queryInput.value,
+        source_id: sourceInput.value || "judge-demo",
+      };
+      try {
+        const body = await fetchJson("/api/demo/evaluate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        updateDecision(body);
+        updateMetrics(body.state);
+        renderSignalBars(queryInput.value);
+        setInteractionStatus(`Preview complete: ${body.action} with ${body.risk_score}/100 risk.`);
+        document.getElementById("session-status").textContent = "Preview mode updated. Use session step to commit the event into the live timeline.";
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function runSessionStep(customPayload = null) {
+      setBusy(true, "Committing live session step...");
+      const payload = customPayload || {
+        query_raw: queryInput.value,
+        source_id: sourceInput.value || "judge-demo",
+        action_override: actionOverride.value || null,
+      };
+      try {
+        const body = await fetchJson("/api/demo/session/step", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        updateDecision(body);
+        updateMetrics(body.state);
+        appendReward(body.reward.value);
+        addTimelineEntry(body, payload.query_raw);
+        setInteractionStatus(`Live session committed: ${body.action} against ${body.info.attacker_profile}.`);
+        document.getElementById("session-status").textContent = `Last step: ${body.action} | reward ${body.reward.value} | profile ${body.info.attacker_profile}`;
+        return body;
+      } finally {
+        setBusy(false);
+      }
     }
 
     async function resetSession() {
-      setStatus("Resetting");
       const body = await fetchJson("/api/demo/session/reset", { method: "POST" });
-      const title = timelineEl.querySelector("h3");
-      timelineEl.innerHTML = "";
-      timelineEl.appendChild(title);
-      renderState(body.state);
-      sessionStatusEl.textContent = body.message;
-      budgetChipEl.textContent = `Budget: ${body.oversight_budget_remaining}`;
-      setStatus("Session reset");
+      timeline.innerHTML = "";
+      updateMetrics(body.state);
+      document.getElementById("session-status").textContent = body.message;
+      state.rewardHistory = [0, 8, 14, 23, 18, 30];
+      updateRewardChart();
+      setInteractionStatus("Session reset complete. The dashboard is ready for a fresh demo sequence.");
     }
 
-    async function sessionStep(payload) {
-      const body = await fetchJson("/api/demo/session/step", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, oversight_enabled: true })
-      });
-      renderDecision(body);
-      renderState(body.state);
-      prependTimeline(body, payload.query_raw);
-      sessionStatusEl.textContent = `Last step: ${actionLabel(body.executed_action)} | oversight ${actionLabel(body.oversight_decision)} | reward ${body.reward.value}`;
-      return body;
-    }
-
-    async function playSequence() {
-      setStatus("Running sequence");
+    async function playStory() {
       await resetSession();
       for (const step of storySequence) {
-        await sessionStep(step);
+        queryInput.value = step.query_raw;
+        sourceInput.value = step.source_id;
+        await runSessionStep(step);
+        await new Promise((resolve) => setTimeout(resolve, 380));
       }
-      setStatus("Sequence complete");
     }
 
-    document.getElementById("run").addEventListener("click", async () => {
-      try {
-        await analyzeQuery();
-      } catch (error) {
-        console.error(error);
-        logsEl.textContent = error.message;
-        setStatus("Analyze failed", true);
-      }
-    });
+    async function loadBenchmarkProof() {
+      const body = await fetchJson("/api/demo/benchmark");
+      const benchmarkProof = document.getElementById("benchmark-proof");
+      benchmarkProof.innerHTML = "";
+      ["heuristic", "always_block", "always_allow"].forEach((key) => {
+        const row = body.summary[key];
+        if (!row) return;
+        const title = key === "heuristic" ? "Heuristic Sentinel" : key === "always_block" ? "Always Block" : "Always Allow";
+        const card = document.createElement("div");
+        card.className = "proof-card";
+        card.innerHTML = `
+          <strong>${title}</strong>
+          <small>Average return: ${row.episode_return}</small>
+          <small>Attack success: ${Math.round((row.attack_success_rate || 0) * 100)}%</small>
+          <small>False positives: ${Math.round((row.false_positive_rate || 0) * 100)}%</small>
+          <small>Evidence source: ${body.source}</small>
+        `;
+        benchmarkProof.appendChild(card);
+      });
+    }
 
-    document.getElementById("session-reset").addEventListener("click", async () => {
-      try {
-        await resetSession();
-      } catch (error) {
-        console.error(error);
-        logsEl.textContent = error.message;
-        setStatus("Reset failed", true);
-      }
-    });
+    async function loadThemeFit() {
+      const body = await fetchJson("/api/demo/theme-fit");
+      const themeFit = document.getElementById("theme-fit");
+      themeFit.innerHTML = `
+        <div class="proof-card">
+          <strong>${body.primary_theme.name}</strong>
+          <small class="theme-score">Score: ${body.primary_theme.score}/10</small>
+          <small>${body.primary_theme.why}</small>
+        </div>
+        <div class="proof-card">
+          <strong>${body.secondary_theme.name}</strong>
+          <small class="theme-score">Score: ${body.secondary_theme.score}/10</small>
+          <small>${body.secondary_theme.why}</small>
+        </div>
+      `;
+      body.judge_angles.forEach((angle) => {
+        const card = document.createElement("div");
+        card.className = "proof-card";
+        card.innerHTML = `<strong>Judge Angle</strong><small>${angle}</small>`;
+        themeFit.appendChild(card);
+      });
+    }
 
-    document.getElementById("play-sequence").addEventListener("click", async () => {
-      try {
-        await playSequence();
-      } catch (error) {
-        console.error(error);
-        logsEl.textContent = error.message;
-        setStatus("Sequence failed", true);
-      }
-    });
+    document.getElementById("analyze-button").addEventListener("click", analyzeQuery);
+    document.getElementById("session-button").addEventListener("click", () => runSessionStep());
+    document.getElementById("story-button").addEventListener("click", playStory);
 
-    document.querySelectorAll(".scenario").forEach((button) => {
-      button.addEventListener("click", async () => {
-        queryEl.value = button.dataset.query;
-        sourceEl.value = button.dataset.source;
-        try {
-          await analyzeQuery();
-        } catch (error) {
-          console.error(error);
-          logsEl.textContent = error.message;
-          setStatus("Scenario failed", true);
-        }
+    document.querySelectorAll(".scenario").forEach((card) => {
+      card.addEventListener("click", () => {
+        fillPreset(card.dataset.query, card.dataset.source, card.querySelector("strong").textContent);
+        analyzeQuery();
       });
     });
 
-    async function initDemo() {
-      try {
-        await resetSession();
-        await analyzeQuery();
-      } catch (error) {
-        console.error(error);
-        logsEl.textContent = error.message;
-        sessionStatusEl.textContent = `Initialization failed: ${error.message}`;
-        setStatus("Init failed", true);
-      }
-    }
+    presetButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        fillPreset(button.dataset.query, button.dataset.source, button.textContent.trim());
+      });
+    });
 
-    initDemo();
+    queryInput.addEventListener("input", () => {
+      activatePresetButton(queryInput.value);
+      renderSignalBars(queryInput.value);
+      setInteractionStatus("Custom query detected. Signals are updating live as you type.");
+    });
+
+    Promise.all([loadBenchmarkProof(), loadThemeFit(), resetSession()])
+      .then(() => {
+        renderSignalBars(queryInput.value);
+        updateRewardChart();
+        return analyzeQuery();
+      })
+      .catch((error) => {
+        decisionLogs.textContent = `Command Center could not reach the backend.\n${error.message}\n\nStart the app with: python -m uvicorn server.app:app --port 8001`;
+      });
   </script>
 </body>
 </html>

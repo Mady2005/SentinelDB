@@ -83,6 +83,16 @@ Important note:
 - it is not the final improvement claim
 - the final reward-improvement proof should be generated onsite with a stronger model and more episodes
 
+## Judge Q&A: What improves after training?
+
+The main improvement target in SentinelDB is not "block more." It is learning the correct tradeoff:
+
+- keep `attack_success_rate` low
+- avoid `false_positive_rate = 1.0`
+- improve `episode_return` over long sessions
+
+That is why SentinelDB is useful as a training environment. It penalizes both permissive failure and paranoid over-blocking, so a successful learned policy must improve the security-availability balance rather than exploit a trivial shortcut.
+
 ## What to show live
 
 1. Open the Hugging Face Space demo.

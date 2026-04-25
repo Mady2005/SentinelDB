@@ -78,6 +78,10 @@ class SentinelEnvironment(Environment):
             "correct_overrides": 0,
             "wrong_overrides": 0,
             "prevented_attacks": 0,
+            "policy_violations": 0,
+            "timeout_events": 0,
+            "schema_failures": 0,
+            "rate_limit_events": 0,
         }
 
     def reset(self) -> SentinelObservation:
@@ -176,6 +180,10 @@ class SentinelEnvironment(Environment):
             has_or_1_eq_1=signals["OR_1_EQ_1"],
             has_union_select=signals["UNION_SELECT_OR_EXPORT"],
             has_drop=signals["DESTRUCTIVE_DDL"],
+            has_permission_risk=signals["PERMISSION_RISK"],
+            has_schema_mismatch_risk=signals["SCHEMA_MISMATCH_RISK"],
+            has_timeout_risk=signals["TIMEOUT_RISK"],
+            has_rate_limit_risk=signals["RATE_LIMIT_RISK"],
             source_id=query.source_id,
             past_queries_from_source=prior_queries,
             past_attacks_from_source=prior_attacks,
@@ -226,6 +234,62 @@ class SentinelEnvironment(Environment):
             "step": self.state["step"],
         }
 
+    def preview_reward_breakdown(
+        self,
+        query: QueryRecord,
+        obs: SentinelObservation,
+        executed_action: SentinelAction,
+        oversight_trace: OversightTrace | None = None,
+    ) -> dict[str, float]:
+        is_attack = query.type != "benign"
+        breakdown = {
+            "availability": 0.0,
+            "security": 0.0,
+            "deception": 0.0,
+            "oversight": 0.0,
+            "operational": 0.0,
+        }
+
+        if not is_attack:
+            if executed_action.action_type in {"ALLOW_REAL", "BACKUP_ALLOW"}:
+                breakdown["availability"] += 1.0
+                if executed_action.action_type == "BACKUP_ALLOW" and self.state["backup_available"]:
+                    breakdown["availability"] -= 0.2
+            else:
+                breakdown["availability"] -= 0.5
+        else:
+            if executed_action.action_type in {"ALLOW_REAL", "BACKUP_ALLOW"}:
+                breakdown["security"] -= 5.0
+                if executed_action.action_type == "BACKUP_ALLOW" and self.state["backup_available"]:
+                    breakdown["availability"] -= 0.2
+            elif executed_action.action_type == "ROUTE_DECOY":
+                breakdown["security"] += 0.5
+                breakdown["deception"] += 0.1
+            else:
+                breakdown["security"] += 0.5
+
+        if executed_action.action_type in {"ALLOW_REAL", "BACKUP_ALLOW"}:
+            if obs.has_permission_risk:
+                breakdown["operational"] -= 0.5
+            if obs.has_schema_mismatch_risk:
+                breakdown["operational"] -= 0.2
+            if obs.has_timeout_risk:
+                breakdown["operational"] -= 0.3
+            if obs.has_rate_limit_risk:
+                breakdown["operational"] -= 0.3
+
+        if oversight_trace is not None and oversight_trace.override_used:
+            breakdown["oversight"] -= 0.1
+            if is_attack and oversight_trace.proposed_action in {"ALLOW_REAL", "BACKUP_ALLOW"}:
+                breakdown["oversight"] += 1.0
+            elif not is_attack:
+                breakdown["oversight"] -= 0.4
+            elif oversight_trace.proposed_action in {"BLOCK", "ROUTE_DECOY"}:
+                breakdown["oversight"] -= 0.2
+
+        breakdown["total"] = sum(breakdown.values())
+        return {key: round(value, 4) for key, value in breakdown.items()}
+
     def _execute_final_action(
         self,
         query: QueryRecord,
@@ -233,13 +297,14 @@ class SentinelEnvironment(Environment):
         oversight_trace: OversightTrace | None = None,
     ) -> StepResult:
         is_attack = query.type != "benign"
+        current_obs = self.current_observation
         reward_value = 0.0
         breakdown: dict[str, float] = {
-            "service": 0.0,
+            "availability": 0.0,
             "security": 0.0,
-            "backup_cost": 0.0,
+            "deception": 0.0,
             "oversight": 0.0,
-            "terminal": 0.0,
+            "operational": 0.0,
         }
         event = {"blocked": 0, "successful": 0, "false_positive": 0}
 
@@ -247,16 +312,16 @@ class SentinelEnvironment(Environment):
             if executed_action.action_type in {"ALLOW_REAL", "BACKUP_ALLOW"}:
                 self.state["served_legit"] += 1
                 reward_value += 1.0
-                breakdown["service"] += 1.0
+                breakdown["availability"] += 1.0
                 if executed_action.action_type == "BACKUP_ALLOW" and self.state["backup_available"]:
                     self.state["backup_available"] = False
                     self.state["backups_used"] += 1
                     reward_value -= 0.2
-                    breakdown["backup_cost"] -= 0.2
+                    breakdown["availability"] -= 0.2
             else:
                 self.state["false_positives"] += 1
                 reward_value -= 0.5
-                breakdown["service"] -= 0.5
+                breakdown["availability"] -= 0.5
                 event["false_positive"] = 1
         else:
             if executed_action.action_type in {"ALLOW_REAL", "BACKUP_ALLOW"}:
@@ -269,19 +334,38 @@ class SentinelEnvironment(Environment):
                     self.state["backup_available"] = False
                     self.state["backups_used"] += 1
                     reward_value -= 0.2
-                    breakdown["backup_cost"] -= 0.2
+                    breakdown["availability"] -= 0.2
                 if self.state["real_db_health"] <= 0:
                     self.state["real_db_compromised"] = True
             elif executed_action.action_type == "ROUTE_DECOY":
                 self.state["decoy_engagement"] += 1.0
                 reward_value += 0.6
-                breakdown["security"] += 0.6
+                breakdown["security"] += 0.5
+                breakdown["deception"] += 0.1
                 event["blocked"] = 1
             else:
                 self.state["blocked_attacks"] += 1
                 reward_value += 0.5
                 breakdown["security"] += 0.5
                 event["blocked"] = 1
+
+        if current_obs is not None and executed_action.action_type in {"ALLOW_REAL", "BACKUP_ALLOW"}:
+            if current_obs.has_permission_risk:
+                self.state["policy_violations"] += 1
+                reward_value -= 0.5
+                breakdown["operational"] -= 0.5
+            if current_obs.has_schema_mismatch_risk:
+                self.state["schema_failures"] += 1
+                reward_value -= 0.2
+                breakdown["operational"] -= 0.2
+            if current_obs.has_timeout_risk:
+                self.state["timeout_events"] += 1
+                reward_value -= 0.3
+                breakdown["operational"] -= 0.3
+            if current_obs.has_rate_limit_risk:
+                self.state["rate_limit_events"] += 1
+                reward_value -= 0.3
+                breakdown["operational"] -= 0.3
 
         if oversight_trace is not None and oversight_trace.override_used:
             self.state["oversight_used"] += 1
@@ -307,10 +391,10 @@ class SentinelEnvironment(Environment):
         if done:
             terminal_bonus = 0.1 * self.state["decoy_engagement"]
             reward_value += terminal_bonus
-            breakdown["terminal"] += terminal_bonus
+            breakdown["deception"] += terminal_bonus
             if self.state["real_db_compromised"]:
                 reward_value -= 10.0
-                breakdown["terminal"] -= 10.0
+                breakdown["security"] -= 10.0
 
         info = self._base_info(query)
         if oversight_trace is not None:
@@ -321,6 +405,7 @@ class SentinelEnvironment(Environment):
             info["prevented_attacks"] = self.state["prevented_attacks"]
 
         next_obs = self._prepare_next_observation(done)
+        breakdown["total"] = reward_value
         reward = SentinelReward(
             value=round(reward_value, 4),
             breakdown={key: round(value, 4) for key, value in breakdown.items()},
@@ -348,6 +433,7 @@ class SentinelEnvironment(Environment):
             "queries_seen": total_queries,
             "oversight_budget_remaining": self._remaining_oversight_budget(),
             "oversight_precision": round(self.state["correct_overrides"] / oversight_used, 4) if oversight_used else 0.0,
+            "operational_pressure": self.state["policy_violations"] + self.state["timeout_events"] + self.state["schema_failures"] + self.state["rate_limit_events"],
             "resilience_score": max(
                 0.0,
                 round(
@@ -362,6 +448,8 @@ class SentinelEnvironment(Environment):
 
     def extract_signals(self, query_raw: str) -> dict[str, bool]:
         normalized = query_raw.upper()
+        join_count = normalized.count(" JOIN ")
+        wildcard_scans = normalized.count("SELECT *")
         return {
             "OR_1_EQ_1": "OR 1=1" in normalized,
             "UNION_SELECT_OR_EXPORT": any(token in normalized for token in ("UNION SELECT", "COPY (", "EXPORT TABLE")),
@@ -370,6 +458,10 @@ class SentinelEnvironment(Environment):
             "COMMENT_BYPASS": any(token in normalized for token in ("--", "/*", "*/")),
             "SENSITIVE_TABLE_ACCESS": any(token in normalized for token in ("SSN", "SECRET", "PII", "PAYROLL", "CARD_NO", "CVV", "API_KEY")),
             "PRIVILEGE_ESCALATION": any(token in normalized for token in ("GRANT ", "ALTER ROLE", "CREATE USER", "ADMIN'")),
+            "PERMISSION_RISK": any(token in normalized for token in ("GRANT ", "ALTER USER", "ALTER ROLE", "CREATE USER", "ADMIN", "ROOT", "SUDO", "PRIVILEGE")),
+            "SCHEMA_MISMATCH_RISK": any(token in normalized for token in ("UNKNOWN_", "NONEXISTENT", "MISSING_FIELD", "GHOST_TABLE", "BAD_COLUMN", "INVALID_SCHEMA")),
+            "TIMEOUT_RISK": len(query_raw) > 120 or join_count >= 2 or wildcard_scans >= 2 or "RECURSIVE" in normalized,
+            "RATE_LIMIT_RISK": False,
         }
 
     def infer_query_type(self, query_raw: str) -> str:
@@ -388,7 +480,19 @@ class SentinelEnvironment(Environment):
 
     def risk_summary(self, obs: SentinelObservation) -> dict[str, Any]:
         signals = self.extract_signals(obs.query_raw)
+        signals["RATE_LIMIT_RISK"] = obs.past_queries_from_source >= 3 or (
+            obs.past_queries_from_source >= 2 and obs.past_attacks_from_source > 0
+        )
         suspicious_signals = [name for name, active in signals.items() if active]
+        failure_modes: list[str] = []
+        if signals["PERMISSION_RISK"]:
+            failure_modes.append("AUTH_SCOPE_MISSING")
+        if signals["SCHEMA_MISMATCH_RISK"]:
+            failure_modes.append("SCHEMA_MISMATCH")
+        if signals["TIMEOUT_RISK"]:
+            failure_modes.append("TIMEOUT_PRESSURE")
+        if signals["RATE_LIMIT_RISK"]:
+            failure_modes.append("RATE_LIMIT_PRESSURE")
         score = 8
         score += 60 if obs.has_drop else 0
         score += 34 if obs.has_union_select else 0
@@ -397,6 +501,10 @@ class SentinelEnvironment(Environment):
         score += 10 if signals["COMMENT_BYPASS"] else 0
         score += 23 if signals["SENSITIVE_TABLE_ACCESS"] else 0
         score += 18 if signals["PRIVILEGE_ESCALATION"] else 0
+        score += 14 if signals["PERMISSION_RISK"] else 0
+        score += 10 if signals["SCHEMA_MISMATCH_RISK"] else 0
+        score += 12 if signals["TIMEOUT_RISK"] else 0
+        score += 14 if signals["RATE_LIMIT_RISK"] else 0
         score += min(obs.past_attacks_from_source * 8, 16)
         score += min(obs.recent_attacks_successful * 4, 12)
         score += 8 if obs.real_db_health < 0.5 else 0
@@ -416,6 +524,8 @@ class SentinelEnvironment(Environment):
             rationale.append("Recent successful attacks increase pressure to avoid the real database.")
         if obs.real_db_health < 0.5:
             rationale.append("Real database health is already degraded, so containment is more valuable.")
+        if failure_modes:
+            rationale.append(f"Operational failure modes are active: {', '.join(failure_modes)}.")
         if not rationale:
             rationale.append("No high-risk lexical indicators were detected, so normal service is preferred.")
 
@@ -424,6 +534,7 @@ class SentinelEnvironment(Environment):
             "risk_score": risk_score,
             "threat_level": threat_level,
             "suspicious_signals": suspicious_signals,
+            "failure_modes": failure_modes,
             "rationale": rationale,
             "recommended_action": recommended_action,
         }
@@ -440,6 +551,7 @@ class SentinelEnvironment(Environment):
             interventions_used=self.state["oversight_used"],
             recent_successful_attacks=obs.recent_attacks_successful,
             recent_false_positives=obs.recent_false_positives,
+            failure_modes=summary["failure_modes"],
         )
 
     def heuristic_oversight_decision(self, oversight_obs: OversightObservation) -> tuple[OversightAction, str]:
@@ -450,7 +562,7 @@ class SentinelEnvironment(Environment):
         sentinel_obs = oversight_obs.sentinel_observation
 
         if proposed_action in {"ALLOW_REAL", "BACKUP_ALLOW"} and oversight_obs.risk_score >= 70:
-            if sentinel_obs.has_drop or sentinel_obs.has_union_select or sentinel_obs.real_db_health < 0.55:
+            if sentinel_obs.has_drop or sentinel_obs.has_union_select or sentinel_obs.real_db_health < 0.55 or oversight_obs.failure_modes:
                 return (
                     OversightAction(decision="OVERRIDE_TO_DECOY"),
                     "Risk is critical and the proposed allow path would expose the real database, so oversight reroutes to the decoy.",
@@ -542,6 +654,7 @@ class SentinelEnvironment(Environment):
             "target_db": target_db,
             "backup_status": backup_status,
             "suspicious_signals": summary["suspicious_signals"],
+            "failure_modes": summary["failure_modes"],
             "risk_score": summary["risk_score"],
             "rationale": summary["rationale"],
             "recommended_action": summary["recommended_action"],
@@ -551,6 +664,14 @@ class SentinelEnvironment(Environment):
             "override_used": False,
             "oversight_reason": "Oversight did not intervene.",
             "oversight_budget_remaining": self._remaining_oversight_budget(),
+            "reward_breakdown": {
+                "security": 0.0,
+                "availability": 0.0,
+                "deception": 0.0,
+                "oversight": 0.0,
+                "operational": 0.0,
+                "total": 0.0,
+            },
         }
         explanation["log_lines"] = [
             f"[Watcher] Observed query: {obs.query_raw}",
@@ -581,6 +702,8 @@ class SentinelEnvironment(Environment):
         explanation["log_lines"].append(f"[Migration] Backup: {backup_status}")
         if suspicious:
             explanation["log_lines"].append(f"[Signals] {', '.join(summary['suspicious_signals'])}")
+        if summary["failure_modes"]:
+            explanation["log_lines"].append(f"[Ops] Failure modes: {', '.join(summary['failure_modes'])}")
         return explanation
 
     def preview_guarded_decision(
@@ -594,6 +717,8 @@ class SentinelEnvironment(Environment):
         trace = self.apply_oversight(obs, sentinel_action)
         final_action = self._executed_action_from_trace(trace)
         explanation = self.explain_action(obs, sentinel_action, oversight_trace=trace)
+        record = QueryRecord(type=self.infer_query_type(query_raw), raw=query_raw, source_id=source_id)
+        explanation["reward_breakdown"] = self.preview_reward_breakdown(record, obs, final_action, oversight_trace=trace)
         return {
             "observation": obs.model_dump(),
             "sentinel_action": sentinel_action.action_type,
@@ -636,8 +761,10 @@ class SentinelEnvironment(Environment):
             "risk_score": explanation["risk_score"],
             "backup_status": explanation["backup_status"],
             "suspicious_signals": explanation["suspicious_signals"],
+            "failure_modes": explanation["failure_modes"],
             "rationale": explanation["rationale"],
             "reward": result.reward.model_dump(),
+            "reward_breakdown": result.reward.breakdown,
             "done": result.done,
             "observation": obs.model_dump(),
             "state": self.get_state(),
@@ -658,6 +785,10 @@ def heuristic_action_for_observation(obs: SentinelObservation) -> SentinelAction
     suspicious_score += 3 if obs.has_or_1_eq_1 else 0
     suspicious_score += 3 if obs.has_union_select else 0
     suspicious_score += 4 if obs.has_drop else 0
+    suspicious_score += 2 if obs.has_permission_risk else 0
+    suspicious_score += 1 if obs.has_schema_mismatch_risk else 0
+    suspicious_score += 1 if obs.has_timeout_risk else 0
+    suspicious_score += 2 if obs.has_rate_limit_risk else 0
     suspicious_score += 2 if "COPY (" in normalized or "EXPORT TABLE" in normalized else 0
     suspicious_score += 2 if "DELETE FROM BACKUPS" in normalized else 0
     suspicious_score += 1 if obs.past_attacks_from_source > 0 else 0
