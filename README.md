@@ -34,7 +34,7 @@ The repo is pinned to the latest required OpenEnv package line used in the hacka
 - Judge Brief: [docs/JUDGE_BRIEF.md](docs/JUDGE_BRIEF.md)
 - Pitch Notes: [docs/PITCH.md](docs/PITCH.md)
 - Slides Notes: [docs/SLIDES.md](docs/SLIDES.md)
-
+-job url:[https://huggingface.co/jobs/Maddie75/69ed0433d70108f37acdec21]
 Validator note:
 - this repo includes a runnable training script
 - the public Colab notebook is linked above
