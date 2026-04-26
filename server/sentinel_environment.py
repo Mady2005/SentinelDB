@@ -32,6 +32,7 @@ class QueryRecord:
     type: str
     raw: str
     source_id: str
+    scenario_label: str = "unknown"
 
 
 class StepResult(BaseModel):
@@ -103,36 +104,39 @@ class SentinelEnvironment(Environment):
         is_attack = self.rng.random() < attack_probability
 
         if not is_attack:
-            raw = self.rng.choice(
+            scenario_label, raw = self.rng.choice(
                 [
-                    "SELECT id, balance FROM accounts WHERE customer_id = 1042",
-                    "UPDATE sessions SET last_seen = NOW() WHERE session_id = 'a81'",
-                    "SELECT item_id, quantity FROM inventory WHERE warehouse = 'blr-1'",
-                    "INSERT INTO audit_log(event_type, actor) VALUES ('login', 'ops-bot')",
-                    "SELECT * FROM orders WHERE created_at > NOW() - INTERVAL '1 day'",
+                    ("benign_read", "SELECT id, balance FROM accounts WHERE customer_id = 1042"),
+                    ("benign_write", "UPDATE sessions SET last_seen = NOW() WHERE session_id = 'a81'"),
+                    ("benign_read", "SELECT item_id, quantity FROM inventory WHERE warehouse = 'blr-1'"),
+                    ("benign_write", "INSERT INTO audit_log(event_type, actor) VALUES ('login', 'ops-bot')"),
+                    ("benign_read", "SELECT * FROM orders WHERE created_at > NOW() - INTERVAL '1 day'"),
+                    ("operational_anomaly", "SELECT unknown_field FROM ghost_table"),
+                    ("operational_anomaly", "SELECT missing_field FROM customer_archive WHERE id = 44"),
                 ]
             )
-            return QueryRecord(type="benign", raw=raw, source_id=source_id)
+            return QueryRecord(type="benign", raw=raw, source_id=source_id, scenario_label=scenario_label)
 
         attack_type = self._sample_attack_type(profile)
         payloads = {
             "SQL_INJECTION": [
-                "SELECT * FROM users WHERE email = 'a' OR 1=1 --'",
-                "SELECT * FROM payments WHERE id = 4 UNION SELECT card_no, cvv FROM cards",
-                "admin' OR 1=1 /* bypass */",
+                ("sql_injection", "SELECT * FROM users WHERE email = 'a' OR 1=1 --'"),
+                ("exfiltration", "SELECT * FROM payments WHERE id = 4 UNION SELECT card_no, cvv FROM cards"),
+                ("privilege_escalation", "admin' OR 1=1 /* bypass */"),
             ],
             "DATA_EXFIL": [
-                "SELECT name, ssn FROM customers UNION SELECT api_key, secret FROM secrets",
-                "EXPORT TABLE payroll TO 'attacker-bucket'",
-                "COPY (SELECT * FROM pii) TO STDOUT",
+                ("exfiltration", "SELECT name, ssn FROM customers UNION SELECT api_key, secret FROM secrets"),
+                ("exfiltration", "EXPORT TABLE payroll TO 'attacker-bucket'"),
+                ("exfiltration", "COPY (SELECT * FROM pii) TO STDOUT"),
             ],
             "DESTRUCTIVE": [
-                "DROP TABLE transactions",
-                "DELETE FROM backups WHERE created_at < NOW() - INTERVAL '30 day'",
-                "TRUNCATE TABLE audit_log",
+                ("destructive_ddl", "DROP TABLE transactions"),
+                ("destructive_ddl", "DELETE FROM backups WHERE created_at < NOW() - INTERVAL '30 day'"),
+                ("destructive_ddl", "TRUNCATE TABLE audit_log"),
             ],
         }
-        return QueryRecord(type=attack_type, raw=self.rng.choice(payloads[attack_type]), source_id=source_id)
+        scenario_label, raw = self.rng.choice(payloads[attack_type])
+        return QueryRecord(type=attack_type, raw=raw, source_id=source_id, scenario_label=scenario_label)
 
     def _attack_probability(self, profile: str) -> float:
         if profile == "noob":
@@ -223,6 +227,7 @@ class SentinelEnvironment(Environment):
     def _base_info(self, query: QueryRecord) -> dict[str, Any]:
         return {
             "query_type": query.type,
+            "scenario_label": query.scenario_label,
             "source_id": query.source_id,
             "attacker_profile": self.state["attacker_profile"],
             "real_db_health": round(self.state["real_db_health"], 3),
@@ -339,6 +344,7 @@ class SentinelEnvironment(Environment):
                     self.state["real_db_compromised"] = True
             elif executed_action.action_type == "ROUTE_DECOY":
                 self.state["decoy_engagement"] += 1.0
+                self.state["blocked_attacks"] += 1
                 reward_value += 0.6
                 breakdown["security"] += 0.5
                 breakdown["deception"] += 0.1
@@ -474,8 +480,30 @@ class SentinelEnvironment(Environment):
             return "SQL_INJECTION"
         return "benign"
 
+    def infer_scenario_label(self, query_raw: str) -> str:
+        normalized = query_raw.upper()
+        signals = self.extract_signals(query_raw)
+        if signals["PRIVILEGE_ESCALATION"] or "ADMIN" in normalized:
+            return "privilege_escalation"
+        if signals["DESTRUCTIVE_DDL"]:
+            return "destructive_ddl"
+        if signals["UNION_SELECT_OR_EXPORT"] or signals["SENSITIVE_TABLE_ACCESS"]:
+            return "exfiltration"
+        if signals["OR_1_EQ_1"] or signals["STACKED_QUERY"] or signals["COMMENT_BYPASS"]:
+            return "sql_injection"
+        if signals["SCHEMA_MISMATCH_RISK"] or "GHOST_TABLE" in normalized or "MISSING_FIELD" in normalized:
+            return "operational_anomaly"
+        if normalized.startswith("UPDATE ") or normalized.startswith("INSERT "):
+            return "benign_write"
+        return "benign_read"
+
     def observation_from_raw_query(self, query_raw: str, source_id: str = "demo-user", record_source: bool = False) -> SentinelObservation:
-        record = QueryRecord(type=self.infer_query_type(query_raw), raw=query_raw, source_id=source_id)
+        record = QueryRecord(
+            type=self.infer_query_type(query_raw),
+            raw=query_raw,
+            source_id=source_id,
+            scenario_label=self.infer_scenario_label(query_raw),
+        )
         return self.build_observation(record, record_source=record_source)
 
     def risk_summary(self, obs: SentinelObservation) -> dict[str, Any]:
@@ -723,6 +751,7 @@ class SentinelEnvironment(Environment):
             "observation": obs.model_dump(),
             "sentinel_action": sentinel_action.action_type,
             "final_action": final_action.action_type,
+            "scenario_label": record.scenario_label,
             "oversight_trace": trace.model_dump(),
             "explanation": explanation,
         }
@@ -735,7 +764,12 @@ class SentinelEnvironment(Environment):
         oversight_enabled: bool = True,
     ) -> dict[str, Any]:
         inferred_type = self.infer_query_type(query_raw)
-        record = QueryRecord(type=inferred_type, raw=query_raw, source_id=source_id)
+        record = QueryRecord(
+            type=inferred_type,
+            raw=query_raw,
+            source_id=source_id,
+            scenario_label=self.infer_scenario_label(query_raw),
+        )
         self.current_query = record
         obs = self.build_observation(record, record_source=True)
         self.current_observation = obs

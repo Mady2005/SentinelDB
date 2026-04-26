@@ -28,6 +28,7 @@ The repo is pinned to the latest required OpenEnv package line used in the hacka
 - Hugging Face Space: https://huggingface.co/spaces/Maddie75/SentinelDB-Train
 - Code Repository: https://github.com/Mady2005/SentinelDB
 - Colab Notebook: https://colab.research.google.com/drive/1hKlL3n82yd8K5cfapq2KD2aLZnu9fYDp?usp=sharing
+- Mini Blog Draft: [docs/blog.md](docs/blog.md)
 - Training Script: [train_trl.py](train_trl.py)
 - Training Notebook File: [notebooks/SentinelDB_Training.ipynb](notebooks/SentinelDB_Training.ipynb)
 - Submission Writeup: [docs/WRITEUP.md](docs/WRITEUP.md)
@@ -40,6 +41,35 @@ Validator note:
 - the public Colab notebook is linked above
 - reward and loss plots are committed as `.png` files
 - all deliverables are reachable from this README
+
+## Hackathon Requirements Checklist
+
+Minimum submission requirements from the OpenEnv Hackathon are covered as follows:
+
+- **Latest OpenEnv release used**
+  This repo is pinned to `openenv-core==0.2.3`.
+
+- **OpenEnv-compliant environment on Hugging Face Spaces**
+  Public Space: https://huggingface.co/spaces/Maddie75/SentinelDB-Train
+
+- **Minimal training script using Hugging Face TRL / Colab**
+  Notebook: https://colab.research.google.com/drive/1hKlL3n82yd8K5cfapq2KD2aLZnu9fYDp?usp=sharing
+  Script: [train_trl.py](train_trl.py)
+
+- **Evidence of real training**
+  Committed plots:
+  - [submission-training/plots/reward_curve.png](submission-training/plots/reward_curve.png)
+  - [submission-training/plots/loss_curve.png](submission-training/plots/loss_curve.png)
+  Supporting remote run:
+  - https://huggingface.co/jobs/Maddie75/69ed0433d70108f37acdec21
+
+- **Short writeup / blog / presentation material**
+  - [docs/blog.md](docs/blog.md)
+  - [docs/WRITEUP.md](docs/WRITEUP.md)
+  - [docs/SLIDES.md](docs/SLIDES.md)
+
+- **README with problem, environment, and results**
+  This file links the Space, repo, notebook, docs, and benchmark outputs in one place.
 
 ## Why This Stands Out
 
@@ -234,6 +264,26 @@ Takeaway:
 
 That is exactly the behavior we want the trained policy to learn.
 
+### Diagnostic benchmark reporting
+
+SentinelDB now reports benchmark performance at three levels:
+
+- overall policy return and error rates
+- attacker-profile slices
+- scenario-level slices
+
+Scenario labels include:
+
+- `benign_read`
+- `benign_write`
+- `operational_anomaly`
+- `privilege_escalation`
+- `sql_injection`
+- `exfiltration`
+- `destructive_ddl`
+
+This makes the benchmark more diagnostic than a single average score. Judges can inspect not just whether a policy wins overall, but **what kinds of situations it handles well or poorly**.
+
 ## What Improved
 
 The most important learning signal in SentinelDB is not "block more." It is **improve the security-availability tradeoff**.
@@ -328,7 +378,10 @@ python evaluate.py --env-url http://localhost:8001/openenv --episodes 20 --outpu
 This saves:
 
 - `metrics.csv`
+- `scenario_metrics.csv`
 - `summary.json`
+- `profile_summary.json`
+- `scenario_summary.json`
 - `plots/attack_success_rate.png`
 - `plots/episode_return.png`
 
@@ -374,6 +427,7 @@ newUpdated/
 |-- notebooks/
 |   `-- SentinelDB_Training.ipynb
 |-- docs/
+|   |-- blog.md
 |   |-- JUDGE_BRIEF.md
 |   |-- PITCH.md
 |   |-- SLIDES.md
