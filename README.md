@@ -257,6 +257,10 @@ Why this matters:
 - reward came from the OpenEnv loop rather than a static dataset
 - the end-to-end observation -> action -> reward -> update pipeline completed on remote GPU compute
 
+![Completed Hugging Face Jobs training run](https://raw.githubusercontent.com/Mady2005/SentinelDB/main/docs/assets/hf-job-completed.png)
+
+Caption: completed remote GRPO training run against the SentinelDB OpenEnv environment on `a10g-small`, showing non-zero environment reward and successful model export.
+
 ## Results That Matter
 
 Judges care more about behavioral tradeoffs than raw loss. These are the metrics that matter most in SentinelDB:

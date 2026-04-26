@@ -267,6 +267,10 @@ We also ran a completed compute-backed training job on Hugging Face during the o
 
 The job completed successfully, logged non-zero environment reward during training (`reward_from_env/mean = 2.05`), recorded final training metrics (`train_loss = 0.005437`, `train_runtime = 25.38`), and wrote model shards successfully. We treat this as supporting evidence that the model is actually training against the SentinelDB OpenEnv environment rather than only being evaluated offline.
 
+![Completed Hugging Face Jobs training run](https://raw.githubusercontent.com/Mady2005/SentinelDB/main/docs/assets/hf-job-completed.png)
+
+Caption: completed remote GRPO training run against the SentinelDB OpenEnv environment on `a10g-small`, showing non-zero environment reward and successful model export.
+
 ### What Training Teaches
 
 The most important training lesson is not "the model learned to block attacks." A weak policy can do that by over-blocking everything.
