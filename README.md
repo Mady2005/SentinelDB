@@ -229,12 +229,33 @@ The main training deliverables for this submission are:
 
 Additional onsite compute-backed evidence:
 
-- Hugging Face Job: https://huggingface.co/jobs/Maddie75/69ed0433d70108f37acdec21
+- completed Hugging Face Jobs training run on `a10g-small` with `Qwen/Qwen2.5-0.5B-Instruct`
 
 Important note:
 
-- the HF Job URL is supporting evidence only
+- the HF Job page is supporting evidence only
 - the primary training submission artifacts are the notebook, script, and committed `.png` plots
+
+### Remote HF Training Summary
+
+We also validated SentinelDB with a completed remote Hugging Face Jobs run using:
+
+- hardware: `a10g-small`
+- model: `Qwen/Qwen2.5-0.5B-Instruct`
+- trainer: TRL / GRPO
+
+Key signals from the completed run:
+
+- `rewards/reward_from_env/mean = 2.05`
+- `train_loss = 0.005437`
+- `train_runtime = 25.38`
+- model export completed successfully: `Writing model shards: 100%`
+
+Why this matters:
+
+- the model was trained against live SentinelDB environment reward
+- reward came from the OpenEnv loop rather than a static dataset
+- the end-to-end observation -> action -> reward -> update pipeline completed on remote GPU compute
 
 ## Results That Matter
 

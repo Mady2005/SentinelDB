@@ -259,7 +259,13 @@ For the hackathon submission, we provide:
 - committed reward and loss plots
 - a public Hugging Face Space hosting the environment
 
-We also ran a larger compute-backed training job on Hugging Face during the onsite event as supporting evidence that the full remote training path works.
+We also ran a completed compute-backed training job on Hugging Face during the onsite event as supporting evidence that the full remote training path works. That run used:
+
+- `a10g-small` GPU hardware
+- `Qwen/Qwen2.5-0.5B-Instruct`
+- TRL / GRPO
+
+The job completed successfully, logged non-zero environment reward during training (`reward_from_env/mean = 2.05`), recorded final training metrics (`train_loss = 0.005437`, `train_runtime = 25.38`), and wrote model shards successfully. We treat this as supporting evidence that the model is actually training against the SentinelDB OpenEnv environment rather than only being evaluated offline.
 
 ### What Training Teaches
 

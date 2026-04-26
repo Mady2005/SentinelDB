@@ -147,15 +147,20 @@ def build_rollout_func(env_url: str):
         env_rewards: list[float] = []
         attack_success_rates: list[float] = []
         false_positive_rates: list[float] = []
-        tokenizer = trainer.processing_class
-        outputs, completion_texts = generate_completion_texts(trainer, prompts)
-        prompt_ids = [out["prompt_ids"] for out in outputs]
-        completion_ids = [out["completion_ids"] for out in outputs]
-        logprobs = [out["logprobs"] for out in outputs]
+        prompt_ids: list[list[int]] = []
+        completion_ids: list[list[int]] = []
+        logprobs: list[list[float]] = []
 
         with SentinelEnv(env_url).sync() as env:
-            for out, completion_text in zip(outputs, completion_texts, strict=False):
+            for _ in prompts:
                 obs = env.reset()
+                initial_prompt = build_prompt_from_observation(obs)
+                initial_outputs, initial_completion_texts = generate_completion_texts(trainer, [initial_prompt])
+                initial_output = initial_outputs[0]
+                completion_text = initial_completion_texts[0]
+                prompt_ids.append(initial_output["prompt_ids"])
+                completion_ids.append(initial_output["completion_ids"])
+                logprobs.append(initial_output["logprobs"])
                 done = False
                 episode_return = 0.0
                 last_info: dict[str, Any] = {}
@@ -173,9 +178,8 @@ def build_rollout_func(env_url: str):
                     turn_budget -= 1
                     if not done and turn_budget > 0:
                         prompt_text = build_prompt_from_observation(obs)
-                        next_out, next_texts = generate_completion_texts(trainer, [prompt_text])
+                        _, next_texts = generate_completion_texts(trainer, [prompt_text])
                         completion_text = next_texts[0]
-                        out = next_out
 
                 attack_total = last_info.get("successful_attacks", 0) + last_info.get("blocked_attacks", 0)
                 benign_total = last_info.get("served_legit", 0) + last_info.get("false_positives", 0)
@@ -216,7 +220,7 @@ def main() -> None:
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    dataset = Dataset.from_dict({"prompt": [f"episode-{idx}" for idx in range(args.episodes)]})
+    dataset = Dataset.from_dict({"prompt": ["ENV_ROLLOUT_PLACEHOLDER"] * args.episodes})
 
     training_args = GRPOConfig(
         output_dir=args.output_dir,
